@@ -15,8 +15,8 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger
 from sklearn.metrics import accuracy_score, f1_score
 
-from data import DATASET_CLASSES, FewShotDataModule
-from model_timm import METHODS, ViTClassifier
+from .data import DATASET_CLASSES, FewShotDataModule
+from .model_timm import METHODS, ViTClassifier
 
 torch.set_float32_matmul_precision('medium')
 
@@ -88,8 +88,8 @@ def main() -> None:
     logger = CSVLogger(save_dir=run_dir, name="logs", version=".")
     
     trainer = L.Trainer(
-        limit_train_batches = 1000,
-        limit_val_batches = 200,
+        # limit_train_batches = 1000,
+        # limit_val_batches = 200,
         accelerator = device,
         max_epochs = args.max_epochs,
         logger = logger,

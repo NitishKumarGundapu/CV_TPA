@@ -3,7 +3,7 @@ set -euo pipefail
 
 DATA_DIR="${DATA_DIR:-data}"
 OUTPUT_DIR="${OUTPUT_DIR:-outputs}"
-EPOCHS="${EPOCHS:-100}"
+EPOCHS="${EPOCHS:-30}"
 SHOTS="${SHOTS:-5}"
 BATCH_SIZE="${BATCH_SIZE:-16}"
 NUM_WORKERS="${NUM_WORKERS:-4}"
@@ -18,8 +18,8 @@ export ACCELERATOR="${ACCELERATOR:-auto}"
 
 export PYTHONPATH="${PYTHONPATH:-}:src"
 
-for dataset in cifar100 flowers102; do
-  for method in zero_shot linear full lora bitfit; do
+for dataset in flowers102; do
+  for method in zero_shot linear full; do
     "$PYTHON" -m vit_fewshot.train \
       --dataset "$dataset" \
       --method "$method" \
