@@ -1,7 +1,5 @@
-.pytest_cache/
-__pycache__/
-*.py[cod]
-.venv/
-data/
-outputs/
-.vscode/
+__pycache__
+.vscode
+data
+src/vit/__pycache__
+src/vit/logs
