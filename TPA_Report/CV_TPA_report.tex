@@ -1,12 +1,13 @@
-\documentclass[journal]{IEEEtran}
+\documentclass[journal,9pt]{IEEEtran}
 \onecolumn
-\linespread{2}
+\linespread{1.0}
 
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{array}
+\usepackage{float}
 \usepackage{url}
 \usepackage[hidelinks]{hyperref}
 \usepackage{xcolor}
@@ -488,7 +489,7 @@ background. Nevertheless, the successful examples show that both backbones
 attend to semantically relevant regions rather than to arbitrary image
 corners.
 
-\begin{figure}[t]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/fig_gradcam_compare.png}
   \caption{Grad-CAM visualizations from the last transformer block on
@@ -503,9 +504,9 @@ cases, but the DINOv3 LP matrix has fewer off-diagonal cells with visible mass.
 The remaining errors are concentrated among visually similar classes, which is
 expected for 32$\times$32 images upscaled to the backbone input resolution.
 
-\begin{figure}[t]
+\begin{figure}[H]
   \centering
-  \includegraphics[width=\linewidth]{figures/fig_confusion_compare.png}
+  \includegraphics[width=0.92\linewidth]{figures/fig_confusion_compare.png}
   \caption{Row-normalized CIFAR-100 test confusion matrices. (a) ViT-B/16 full
   fine-tuning. (b) DINOv3-B/16 linear probing.}
   \label{fig:confusion}
