@@ -1,8 +1,19 @@
-# TPA-17: Few-shot Flowers102 classification with a ViT foundation model
+# TPA-17: Few-shot Flowers102 classification with foundation models
 
-Fine-tuning a pretrained Vision Transformer for image classification with few
-labeled samples, comparing adaptation strategies on accuracy, parameter count,
-and compute cost.
+Fine-tuning pretrained Vision Transformer and DINOv3 foundation models for image
+classification with few labeled samples, comparing adaptation strategies on
+accuracy, parameter count, and compute cost.
+
+## DINOv3 pipeline
+
+`src/dino_v3/` mirrors the ViT pipeline for DINOv3
+(`timm/vit_base_patch16_dinov3.lvd1689m`) with the same `full`, `lp`, `lora`,
+`bitfit`, and `ncm` methods, plus a `predict` command for checkpoint or
+prototype inference. See [src/dino_v3/README.md](src/dino_v3/README.md).
+
+```bash
+python -m src.dino_v3.main sweep --methods full lp lora bitfit ncm
+```
 
 ## Implemented strategies
 
@@ -155,4 +166,14 @@ src/vit/
 ├── visualization.py  # t-SNE and Grad-CAM
 ├── report.py         # Cross-method tables and plots
 └── main.py           # train / evaluate / sweep / report CLI
+
+src/dino_v3/
+├── config.py         # Run configuration and CLI argument definitions
+├── dataset.py        # Flowers102FewShot and timm DINOv3 transforms
+├── model.py          # DINOv3Classifier LightningModule and adaptation methods
+├── metrics.py        # Top-k accuracy, F1, per-class report, confusion matrix
+├── evaluate.py       # Inference, NCM prototypes, metrics/artifacts, prediction
+├── visualization.py  # t-SNE and Grad-CAM
+├── report.py         # Cross-method tables and plots
+└── main.py           # train / evaluate / predict / sweep / report CLI
 ```
