@@ -9,6 +9,21 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 METHODS = ("full", "lp", "lora", "bitfit", "ncm")
 METHOD_ALIASES = {"peft": "lora", "zs": "ncm"}
 
+DATASETS = ("flowers102", "cifar100")
+DATASET_ALIASES = {"cifar-100": "cifar100", "cifar_100": "cifar100", "flowers": "flowers102"}
+DATASET_CLASSES = {"flowers102": 102, "cifar100": 100}
+
+
+def normalize_dataset(name: str) -> str:
+    dataset = name.strip().lower()
+    dataset = DATASET_ALIASES.get(dataset, dataset)
+    if dataset not in DATASETS:
+        raise ValueError(
+            f"Unknown dataset {name!r}. Choose from {DATASETS} "
+            f"(aliases: {tuple(DATASET_ALIASES)})"
+        )
+    return dataset
+
 
 def normalize_method(name: str) -> str:
     method = name.strip().lower()
@@ -34,6 +49,7 @@ class Config:
     data_root: str = "data"
     num_classes: int = 102
     shots_per_class: int | None = 10
+    val_per_class: int = 10
     seed: int = 42
     batch_size: int = 16
     num_workers: int = 4
@@ -53,12 +69,12 @@ class Config:
 
     def __post_init__(self) -> None:
         self.method = normalize_method(self.method)
-        if self.dataset != "flowers102":
-            raise ValueError(
-                f"Unsupported dataset {self.dataset!r}; only 'flowers102' is wired up"
-            )
+        self.dataset = normalize_dataset(self.dataset)
+        self.num_classes = DATASET_CLASSES[self.dataset]
         if self.shots_per_class is not None and self.shots_per_class < 1:
             raise ValueError("shots_per_class must be a positive integer")
+        if self.val_per_class < 1:
+            raise ValueError("val_per_class must be a positive integer")
         if self.num_classes < 2:
             raise ValueError("num_classes must be >= 2")
 
@@ -73,8 +89,12 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
                              "(aliases: peft -> lora, zs -> ncm)")
     parser.add_argument("--model-name", default="google/vit-base-patch16-224")
     parser.add_argument("--data-root", default="data")
+    parser.add_argument("--dataset", default="flowers102",
+                        help="Dataset: flowers102 | cifar100 (aliases: cifar-100)")
     parser.add_argument("--shots-per-class", type=int, default=10,
                         help="Training examples per class; 0 uses the full training split")
+    parser.add_argument("--val-per-class", type=int, default=10,
+                        help="CIFAR-100 validation images carved out per class")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--num-workers", type=int, default=4)

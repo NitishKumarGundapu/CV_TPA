@@ -10,11 +10,13 @@ import pytorch_lightning as pl
 import torch
 
 from .config import (
+    DATASET_CLASSES,
     METHODS,
     REPO_ROOT,
     Config,
     add_common_arguments,
     config_from_args,
+    normalize_dataset,
     normalize_method,
     resolve_path,
 )
@@ -30,9 +32,11 @@ from .report import build_report
 from .trainer import ViTClassifier
 
 COMMON_FLAGS = [
+    ("dataset", "--dataset"),
     ("model_name", "--model-name"),
     ("data_root", "--data-root"),
     ("shots_per_class", "--shots-per-class"),
+    ("val_per_class", "--val-per-class"),
     ("seed", "--seed"),
     ("batch_size", "--batch-size"),
     ("num_workers", "--num-workers"),
@@ -184,16 +188,28 @@ def run_train(cfg: Config) -> dict:
 
 def run_evaluate(args: argparse.Namespace) -> dict:
     cfg = config_from_args(args)
-    _, train_dataset, train_eval_dataset, val_dataset, test_dataset = build_datasets(cfg)
-    loaders = build_dataloaders(
-        cfg, train_dataset, train_eval_dataset, val_dataset, test_dataset
-    )
-
     model = load_checkpoint(args.checkpoint)
     if model.method != cfg.method:
         print(f"[evaluate] checkpoint method={model.method!r}; overriding {cfg.method!r}")
         cfg.method = model.method
     cfg.num_classes = model.num_classes
+    cfg.model_name = (
+        getattr(model, "model_name", None)
+        or model.hparams.get("model_name", cfg.model_name)
+    )
+    cfg.lr = float(model.hparams.get("lr", cfg.lr))
+    cfg.weight_decay = float(model.hparams.get("weight_decay", cfg.weight_decay))
+    expected_classes = DATASET_CLASSES[cfg.dataset]
+    if model.num_classes != expected_classes:
+        raise ValueError(
+            f"Checkpoint has {model.num_classes} classes but dataset {cfg.dataset!r} "
+            f"has {expected_classes}; pass the matching --dataset."
+        )
+
+    _, train_dataset, train_eval_dataset, val_dataset, test_dataset = build_datasets(cfg)
+    loaders = build_dataloaders(
+        cfg, train_dataset, train_eval_dataset, val_dataset, test_dataset
+    )
 
     return evaluate_and_save(
         model,
@@ -218,7 +234,7 @@ def run_sweep(args: argparse.Namespace) -> None:
     for method in methods:
         metrics_path = (
             resolve_path(args.results_dir)
-            / "flowers102"
+            / normalize_dataset(args.dataset)
             / method
             / f"seed_{args.seed}"
             / "metrics.json"

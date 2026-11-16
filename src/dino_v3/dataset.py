@@ -7,7 +7,7 @@ import timm
 import torch
 from timm.data import create_transform, resolve_data_config
 from torch.utils.data import DataLoader, Dataset
-from torchvision.datasets import Flowers102
+from torchvision.datasets import CIFAR100, Flowers102
 
 from .config import Config, resolve_path
 
@@ -112,12 +112,134 @@ class Flowers102FewShot(Dataset):
         }
 
 
+class CIFAR100FewShot(Dataset):
+    """CIFAR-100 with a deterministic validation split and few-shot training subset.
+
+    The official training set has 500 images per class. ``val_per_class`` images
+    are held out per class for validation, then ``shots_per_class`` are sampled
+    from the remaining images for training. Test always uses the official 10k
+    test split.
+    """
+
+    _SPLITS = {"train": "train", "val": "val", "validation": "val", "test": "test"}
+
+    def __init__(
+        self,
+        root: str,
+        split: str = "train",
+        shots_per_class: Optional[int] = 10,
+        val_per_class: int = 10,
+        seed: int = 42,
+        transform=None,
+        download: bool = True,
+    ):
+        if split not in self._SPLITS:
+            raise ValueError(f"split must be one of {tuple(self._SPLITS)}, got {split!r}")
+        if shots_per_class is not None and shots_per_class < 1:
+            raise ValueError("shots_per_class must be a positive integer or None")
+        if val_per_class < 1:
+            raise ValueError("val_per_class must be a positive integer")
+        if transform is None:
+            raise ValueError("transform is required")
+
+        self.split = self._SPLITS[split]
+        self.dataset = CIFAR100(
+            root=str(root),
+            train=self.split != "test",
+            download=download,
+        )
+        self.transform = transform
+        self.indices = self._build_indices(shots_per_class, val_per_class, seed)
+
+    def _build_indices(
+        self, shots_per_class: Optional[int], val_per_class: int, seed: int
+    ) -> list[int]:
+        if self.split == "test":
+            return list(range(len(self.dataset)))
+
+        by_class: dict[int, list[int]] = defaultdict(list)
+        for index, label in enumerate(self.dataset.targets):
+            by_class[int(label)].append(index)
+
+        generator = torch.Generator().manual_seed(seed)
+        selected: list[int] = []
+        validation: list[int] = []
+        for label in sorted(by_class):
+            label_indices = by_class[label]
+            order = torch.randperm(len(label_indices), generator=generator).tolist()
+            if val_per_class >= len(order):
+                raise ValueError(
+                    f"val_per_class={val_per_class} leaves no training images for class {label}"
+                )
+            validation.extend(label_indices[position] for position in order[:val_per_class])
+            pool = [label_indices[position] for position in order[val_per_class:]]
+            if self.split == "val":
+                continue
+            if shots_per_class is not None:
+                if len(pool) < shots_per_class:
+                    raise ValueError(
+                        f"class {label} only has {len(pool)} training images, "
+                        f"requested {shots_per_class}"
+                    )
+                pool = pool[:shots_per_class]
+            selected.extend(pool)
+
+        return sorted(validation if self.split == "val" else selected)
+
+    @property
+    def labels(self) -> list[int]:
+        return [int(self.dataset.targets[index]) for index in self.indices]
+
+    def __len__(self) -> int:
+        return len(self.indices)
+
+    def __getitem__(self, index: int) -> dict[str, torch.Tensor]:
+        image, label = self.dataset[self.indices[index]]
+        return {
+            "pixel_values": self.transform(image.convert("RGB")),
+            "labels": torch.tensor(int(label), dtype=torch.long),
+        }
+
+
 def build_datasets(cfg: Config):
     root = resolve_path(cfg.data_root)
     train_transform = build_transforms(cfg.model_name, augment=True)
     eval_transform = build_transforms(cfg.model_name, augment=False)
-    common = dict(root=str(root), seed=cfg.seed, download=True)
 
+    if cfg.dataset == "cifar100":
+        common = dict(
+            root=str(root / "cifar100"),
+            seed=cfg.seed,
+            val_per_class=cfg.val_per_class,
+            download=True,
+        )
+        train = CIFAR100FewShot(
+            split="train",
+            shots_per_class=cfg.shots_per_class,
+            transform=train_transform,
+            **common,
+        )
+        train_eval = CIFAR100FewShot(
+            split="train",
+            shots_per_class=cfg.shots_per_class,
+            transform=eval_transform,
+            **common,
+        )
+        val = CIFAR100FewShot(
+            split="val",
+            shots_per_class=None,
+            transform=eval_transform,
+            **common,
+        )
+        test = CIFAR100FewShot(
+            split="test",
+            shots_per_class=None,
+            transform=eval_transform,
+            **common,
+        )
+        return train, train_eval, val, test
+
+    common = dict(root=str(root), seed=cfg.seed, download=True)
     train = Flowers102FewShot(
         split="train",
         shots_per_class=cfg.shots_per_class,

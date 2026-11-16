@@ -6,7 +6,7 @@ from typing import Optional
 import torch
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
-from torchvision.datasets import Flowers102
+from torchvision.datasets import CIFAR100, Flowers102
 from transformers import AutoImageProcessor
 
 from .config import Config, resolve_path
@@ -122,16 +122,140 @@ class Flowers102FewShot(Dataset):
         }
 
 
+class CIFAR100FewShot(Dataset):
+    """CIFAR-100 with a deterministic validation split and few-shot training subset.
+
+    The official training set has 500 images per class. ``val_per_class`` images
+    are held out per class for validation, then ``shots_per_class`` are sampled
+    from the remaining images for training. Test always uses the official 10k
+    test split.
+    """
+
+    _SPLITS = {"train": "train", "val": "val", "validation": "val", "test": "test"}
+
+    def __init__(
+        self,
+        root: str,
+        split: str = "train",
+        shots_per_class: Optional[int] = 10,
+        val_per_class: int = 10,
+        seed: int = 42,
+        model_name: str = "google/vit-base-patch16-224",
+        image_processor=None,
+        download: bool = True,
+        augment: bool = False,
+    ):
+        if split not in self._SPLITS:
+            raise ValueError(f"split must be one of {tuple(self._SPLITS)}, got {split!r}")
+        if shots_per_class is not None and shots_per_class < 1:
+            raise ValueError("shots_per_class must be a positive integer or None")
+        if val_per_class < 1:
+            raise ValueError("val_per_class must be a positive integer")
+
+        self.split = self._SPLITS[split]
+        self.dataset = CIFAR100(
+            root=str(root),
+            train=self.split != "test",
+            download=download,
+        )
+        self.image_processor = image_processor or AutoImageProcessor.from_pretrained(model_name)
+        self.indices = self._build_indices(shots_per_class, val_per_class, seed)
+        self.transform = self._build_augmentation() if augment else None
+
+    def _build_indices(
+        self, shots_per_class: Optional[int], val_per_class: int, seed: int
+    ) -> list[int]:
+        if self.split == "test":
+            return list(range(len(self.dataset)))
+
+        by_class: dict[int, list[int]] = defaultdict(list)
+        for index, label in enumerate(self.dataset.targets):
+            by_class[int(label)].append(index)
+
+        generator = torch.Generator().manual_seed(seed)
+        selected: list[int] = []
+        validation: list[int] = []
+        for label in sorted(by_class):
+            label_indices = by_class[label]
+            order = torch.randperm(len(label_indices), generator=generator).tolist()
+            if val_per_class >= len(order):
+                raise ValueError(
+                    f"val_per_class={val_per_class} leaves no training images for class {label}"
+                )
+            validation.extend(label_indices[position] for position in order[:val_per_class])
+            pool = [label_indices[position] for position in order[val_per_class:]]
+            if self.split == "val":
+                continue
+            if shots_per_class is not None:
+                if len(pool) < shots_per_class:
+                    raise ValueError(
+                        f"class {label} only has {len(pool)} training images, "
+                        f"requested {shots_per_class}"
+                    )
+                pool = pool[:shots_per_class]
+            selected.extend(pool)
+
+        return sorted(validation if self.split == "val" else selected)
+
+    def _build_augmentation(self) -> transforms.Compose:
+        size = processor_size(self.image_processor)
+        mean, std = processor_stats(self.image_processor)
+        return transforms.Compose(
+            [
+                transforms.RandomResizedCrop(size, scale=(0.65, 1.0), ratio=(0.75, 1.333)),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(mean, std),
+            ]
+        )
+
+    @property
+    def labels(self) -> list[int]:
+        return [int(self.dataset.targets[index]) for index in self.indices]
+
+    def __len__(self) -> int:
+        return len(self.indices)
+
+    def __getitem__(self, index: int) -> dict[str, torch.Tensor]:
+        image, label = self.dataset[self.indices[index]]
+        image = image.convert("RGB")
+        if self.transform is not None:
+            pixel_values = self.transform(image)
+        else:
+            pixel_values = self.image_processor(images=image, return_tensors="pt")["pixel_values"][0]
+        return {
+            "pixel_values": pixel_values,
+            "labels": torch.tensor(int(label), dtype=torch.long),
+        }
+
+
 def build_datasets(cfg: Config):
     root = resolve_path(cfg.data_root)
     processor = AutoImageProcessor.from_pretrained(cfg.model_name)
     common = dict(
-        root=str(root),
         seed=cfg.seed,
         model_name=cfg.model_name,
         image_processor=processor,
         download=True,
     )
+    if cfg.dataset == "cifar100":
+        common["root"] = str(root / "cifar100")
+        common["val_per_class"] = cfg.val_per_class
+        train = CIFAR100FewShot(
+            split="train", shots_per_class=cfg.shots_per_class, augment=True, **common
+        )
+        train_eval = CIFAR100FewShot(
+            split="train", shots_per_class=cfg.shots_per_class, augment=False, **common
+        )
+        val = CIFAR100FewShot(
+            split="val", shots_per_class=None, augment=False, **common
+        )
+        test = CIFAR100FewShot(
+            split="test", shots_per_class=None, augment=False, **common
+        )
+        return processor, train, train_eval, val, test
+
+    common["root"] = str(root)
     train = Flowers102FewShot(
         split="train", shots_per_class=cfg.shots_per_class, augment=True, **common
     )

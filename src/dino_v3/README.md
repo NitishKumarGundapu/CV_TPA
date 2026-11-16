@@ -33,6 +33,30 @@ training split (10 images/class) is subsampled deterministically with
 `--shots-per-class`; validation and test use the full official splits (1020 and
 6149 images).
 
+CIFAR-100 is available with `--dataset cifar100`. The official 50k training set
+is split deterministically into a validation set (`--val-per-class`, default 10
+per class) and the few-shot training pool; test uses the official 10k split.
+See the root README for a faster mirror if the torchvision download is slow.
+
+## Results (CIFAR-100, 10 shots/class, seed 42)
+
+10 epochs, batch 32, 1000-image validation split, official 10k test split,
+RTX PRO 4000. Full/`lp` use per-method learning rates (2e-5 and 1e-3);
+LoRA/BitFit use 1e-4.
+
+| method | top-1 acc | top-5 acc | macro F1 | trainable params | % trainable | train time (s) | peak GPU (MB) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| full | 0.5802 | 0.8538 | 0.5604 | 85,718,116 | 100.00 | 201.8 | 7362 |
+| lp | 0.8144 | 0.9627 | 0.8150 | 76,900 | 0.09 | 113.1 | 710 |
+| lora | 0.5977 | 0.8563 | 0.5771 | 961,636 | 1.11 | 170.9 | 4908 |
+| bitfit | 0.5106 | 0.7735 | 0.4954 | 152,164 | 0.18 | 159.1 | 4171 |
+| ncm | 0.8164 | 0.9624 | 0.8173 | 0 | 0.00 | 14.9 | 702 |
+
+At 10 shots/class the frozen DINOv3 features win: NCM and linear probing beat
+full fine-tuning and LoRA, which overfit the small training set. DINOv3 full
+fine-tuning is LR-sensitive; 1e-4 collapsed to 13.90% top-1 while 2e-5 reached
+58.02%.
+
 ## Setup
 
 ```bash
@@ -47,6 +71,10 @@ Run from the repository root.
 ```bash
 # Full comparison: train every strategy, evaluate, and write the report
 python -m src.dino_v3.main sweep --methods full lp lora bitfit ncm
+
+# CIFAR-100 comparison
+python -m src.dino_v3.main sweep --dataset cifar100 --methods full lp lora bitfit ncm \
+    --shots-per-class 10 --epochs 10 --patience 3 --batch-size 32
 
 # One strategy
 python -m src.dino_v3.main train --method lora --shots-per-class 10 --epochs 30
@@ -89,7 +117,7 @@ Useful flags: `--seed`, `--batch-size`, `--num-workers`, `--patience`,
 
 ## Outputs
 
-Each run writes to `results/dino_v3/flowers102/<method>/seed_<seed>/`:
+Each run writes to `results/dino_v3/<dataset>/<method>/seed_<seed>/`:
 
 - `metrics.json` — top-1, top-5, macro/weighted F1, parameter counts, training
   time, peak GPU memory, best validation loss, checkpoint path, and notes
@@ -106,7 +134,7 @@ The sweep also writes `results/dino_v3/analysis/summary.csv`, `summary.md`,
 ```
 src/dino_v3/
 ├── config.py         # Run configuration and CLI argument definitions
-├── dataset.py        # Flowers102FewShot and timm DINOv3 transforms
+├── dataset.py        # Flowers102/CIFAR-100 datasets and timm DINOv3 transforms
 ├── model.py          # DINOv3Classifier LightningModule and adaptation methods
 ├── metrics.py        # Top-k accuracy, F1, per-class report, confusion matrix
 ├── evaluate.py       # Inference, NCM prototypes, metrics/artifacts, prediction

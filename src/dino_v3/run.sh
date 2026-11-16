@@ -12,7 +12,9 @@ CONDA_ENV="${CONDA_ENV:-torch_env}"
 
 MODEL_NAME="${MODEL_NAME:-vit_base_patch16_dinov3.lvd1689m}"
 DATA_ROOT="${DATA_ROOT:-data}"
+DATASET="${DATASET:-flowers102}"
 SHOTS_PER_CLASS="${SHOTS_PER_CLASS:-10}"
+VAL_PER_CLASS="${VAL_PER_CLASS:-10}"
 SEED="${SEED:-42}"
 BATCH_SIZE="${BATCH_SIZE:-16}"
 NUM_WORKERS="${NUM_WORKERS:-4}"
@@ -47,7 +49,9 @@ fi
 "${PYTHON[@]}" -m src.dino_v3.main sweep \
   --model-name "${MODEL_NAME}" \
   --data-root "${DATA_ROOT}" \
+  --dataset "${DATASET}" \
   --shots-per-class "${SHOTS_PER_CLASS}" \
+  --val-per-class "${VAL_PER_CLASS}" \
   --seed "${SEED}" \
   --batch-size "${BATCH_SIZE}" \
   --num-workers "${NUM_WORKERS}" \

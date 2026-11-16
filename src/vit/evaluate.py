@@ -179,6 +179,8 @@ def evaluate_and_save(
         "seed": cfg.seed,
         "shots_per_class": cfg.shots_per_class,
         "epochs": 0 if prototypes is not None else cfg.max_epochs,
+        "learning_rate": cfg.lr,
+        "weight_decay": cfg.weight_decay,
         "trainable_parameters": counts["trainable_parameters"],
         "total_parameters": counts["total_parameters"],
         "trainable_fraction": counts["trainable_fraction"],

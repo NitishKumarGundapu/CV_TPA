@@ -52,14 +52,16 @@ def _write_csv(rows: list[dict], path: Path) -> None:
 
 def _write_markdown(rows: list[dict], path: Path) -> None:
     lines = [
-        "| model | method | shots | top-1 acc | top-5 acc | macro F1 | weighted F1 | "
-        "trainable params | % trainable | train time (s) | peak GPU (MB) |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| dataset | model | method | shots | top-1 acc | top-5 acc | macro F1 | "
+        "weighted F1 | trainable params | % trainable | train time (s) | peak GPU (MB) |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in rows:
         lines.append(
-            "| {model} | {method} | {shots} | {acc:.4f} | {top5:.4f} | {macro:.4f} | "
-            "{weighted:.4f} | {params:,} | {fraction:.2f} | {seconds:.1f} | {memory} |".format(
+            "| {dataset} | {model} | {method} | {shots} | {acc:.4f} | {top5:.4f} | "
+            "{macro:.4f} | {weighted:.4f} | {params:,} | {fraction:.2f} | {seconds:.1f} | "
+            "{memory} |".format(
+                dataset=row["dataset"],
                 model=row.get("model") or "dinov3",
                 method=row["method"],
                 shots=row.get("shots_per_class") or "full",
@@ -81,7 +83,12 @@ def _write_markdown(rows: list[dict], path: Path) -> None:
 
 
 def _method_labels(rows: list[dict]) -> list[str]:
-    return [f"{row['method']}\n{row['shots_per_class'] or 'full'} sh" for row in rows]
+    datasets = {row["dataset"] for row in rows}
+    labels = []
+    for row in rows:
+        prefix = f"{row['dataset']}\n" if len(datasets) > 1 else ""
+        labels.append(f"{prefix}{row['method']}\n{row['shots_per_class'] or 'full'} sh")
+    return labels
 
 
 def _annotate_bars(axis, bars, values, formatter) -> None:
