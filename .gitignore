@@ -1,5 +1,7 @@
 __pycache__
 .vscode
 data
+results
 src/vit/__pycache__
 src/vit/logs
+.commandcode
