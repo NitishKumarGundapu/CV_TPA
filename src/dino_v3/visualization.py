@@ -94,11 +94,14 @@ def _denormalize(
     return (image.cpu() * std + mean).clamp(0, 1).permute(1, 2, 0).numpy()
 
 
-def _last_block(backbone) -> torch.nn.Module:
+def _gradcam_block(backbone) -> torch.nn.Module:
     blocks = getattr(backbone, "blocks", None)
     if blocks is None:
         raise AttributeError("Could not locate the DINOv3 transformer blocks")
-    return blocks[-1]
+    # The classifier reads only the CLS token, so patch-token gradients at the
+    # final block output are exactly zero. The penultimate block is the last
+    # tensor whose patch tokens still carry a gradient from the class score.
+    return blocks[-2] if len(blocks) > 1 else blocks[-1]
 
 
 def _gradcam_for_image(
@@ -107,7 +110,7 @@ def _gradcam_for_image(
     device: torch.device,
 ) -> tuple[torch.Tensor | None, int]:
     backbone = model.get_backbone()
-    target_layer = _last_block(backbone)
+    target_layer = _gradcam_block(backbone)
     prefix_tokens = int(getattr(backbone, "num_prefix_tokens", 0))
     captured: dict[str, torch.Tensor] = {}
 
@@ -212,7 +215,7 @@ def plot_gradcam_grid(
     for axis in axes[len(samples) :]:
         axis.axis("off")
 
-    figure.suptitle("Grad-CAM (last DINOv3 block)")
+    figure.suptitle("Grad-CAM (penultimate DINOv3 block)")
     figure.tight_layout()
     out_path = Path(out_path)
     figure.savefig(out_path, dpi=160)

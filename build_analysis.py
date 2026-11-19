@@ -17,7 +17,6 @@ MODEL_DIRS = {
 }
 ANALYSIS_DIR = RESULTS_DIR / "analysis"
 
-
 def main() -> None:
     grouped: dict[tuple[str, str], list[dict]] = {}
     for model_family, results_root in MODEL_DIRS.items():
