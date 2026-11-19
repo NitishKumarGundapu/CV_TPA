@@ -1,7 +1,8 @@
 # DINOv3 Few-Shot Flowers102 Pipeline
 
 Fine-tuning the DINOv3 foundation model for few-shot image classification,
-mirroring the adaptation strategies in `src/vit` on the same Flowers102 split.
+mirroring the adaptation strategies in `src/vit` on the same Flowers102 and
+Oxford-IIIT Pet splits.
 
 ## Methods
 
@@ -28,15 +29,17 @@ The default backbone is `vit_base_patch16_dinov3.lvd1689m`, loaded through
 Preprocessing (256x256 input, bicubic, ImageNet normalization) is resolved from
 the timm pretrained configuration.
 
-Flowers102 is downloaded by `torchvision` into `data/flowers-102/`. The official
-training split (10 images/class) is subsampled deterministically with
-`--shots-per-class`; validation and test use the full official splits (1020 and
-6149 images).
+Flowers102 is downloaded by `torchvision` into `data/flowers-102/`. The full
+official training split (10 images/class) is used by default; pass
+`--shots-per-class` to subsample it deterministically. Validation and test use
+the full official splits (1020 and 6149 images).
 
-CIFAR-100 is available with `--dataset cifar100`. The official 50k training set
-is split deterministically into a validation set (`--val-per-class`, default 10
-per class) and the few-shot training pool; test uses the official 10k split.
-See the root README for a faster mirror if the torchvision download is slow.
+Oxford-IIIT Pet is available with `--dataset oxfordiiitpet`. It is loaded with
+`torchvision.datasets.ImageFolder` from `data/oxford_pet/{train,test}/<class>/`.
+Training uses the full `train` folder (37 classes, roughly 100 images/class)
+unless `--shots-per-class` is set. There is no validation folder, so
+`--val-per-class` (default 10) images per class are held out deterministically
+from `test` for validation; the remaining test images form the test split.
 
 ## Results (CIFAR-100, 10 shots/class, seed 42)
 
@@ -72,9 +75,9 @@ Run from the repository root.
 # Full comparison: train every strategy, evaluate, and write the report
 python -m src.dino_v3.main sweep --methods full lp lora bitfit ncm
 
-# CIFAR-100 comparison
-python -m src.dino_v3.main sweep --dataset cifar100 --methods full lp lora bitfit ncm \
-    --shots-per-class 10 --epochs 10 --patience 3 --batch-size 32
+# Oxford-IIIT Pet comparison
+python -m src.dino_v3.main sweep --dataset oxfordiiitpet --methods full lp lora bitfit ncm \
+    --epochs 10 --patience 3 --batch-size 32
 
 # One strategy
 python -m src.dino_v3.main train --method lora --shots-per-class 10 --epochs 30
@@ -134,7 +137,7 @@ The sweep also writes `results/dino_v3/analysis/summary.csv`, `summary.md`,
 ```
 src/dino_v3/
 ├── config.py         # Run configuration and CLI argument definitions
-├── dataset.py        # Flowers102/CIFAR-100 datasets and timm DINOv3 transforms
+├── dataset.py        # Flowers102/Oxford-IIIT Pet datasets and timm DINOv3 transforms
 ├── model.py          # DINOv3Classifier LightningModule and adaptation methods
 ├── metrics.py        # Top-k accuracy, F1, per-class report, confusion matrix
 ├── evaluate.py       # Inference, NCM prototypes, metrics/artifacts, prediction

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from pathlib import Path
 from typing import Optional
 
 import torch
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
-from torchvision.datasets import CIFAR100, Flowers102
+from torchvision.datasets import Flowers102, ImageFolder
 from transformers import AutoImageProcessor
 
 from .config import Config, resolve_path
@@ -122,16 +123,23 @@ class Flowers102FewShot(Dataset):
         }
 
 
-class CIFAR100FewShot(Dataset):
-    """CIFAR-100 with a deterministic validation split and few-shot training subset.
+class OxfordIIITPetFewShot(Dataset):
+    """Oxford-IIIT Pet loaded with ``ImageFolder`` from ``data/oxford_pet``.
 
-    The official training set has 500 images per class. ``val_per_class`` images
-    are held out per class for validation, then ``shots_per_class`` are sampled
-    from the remaining images for training. Test always uses the official 10k
+    Expects the ``ImageFolder`` layout ``data/oxford_pet/{train,test}/<class>/*.jpg``.
+    Training uses the full ``train`` folder unless ``shots_per_class`` is set.
+    There is no validation folder, so ``val_per_class`` images are held out
+    deterministically per class from ``test``; the remaining test images form the
     test split.
     """
 
-    _SPLITS = {"train": "train", "val": "val", "validation": "val", "test": "test"}
+    _SPLITS = {
+        "train": "train",
+        "trainval": "train",
+        "val": "val",
+        "validation": "val",
+        "test": "test",
+    }
 
     def __init__(
         self,
@@ -142,7 +150,6 @@ class CIFAR100FewShot(Dataset):
         seed: int = 42,
         model_name: str = "google/vit-base-patch16-224",
         image_processor=None,
-        download: bool = True,
         augment: bool = False,
     ):
         if split not in self._SPLITS:
@@ -153,49 +160,52 @@ class CIFAR100FewShot(Dataset):
             raise ValueError("val_per_class must be a positive integer")
 
         self.split = self._SPLITS[split]
-        self.dataset = CIFAR100(
-            root=str(root),
-            train=self.split != "test",
-            download=download,
-        )
+        split_dir = "train" if self.split == "train" else "test"
+        self.dataset = ImageFolder(str(Path(root) / "oxford_pet" / split_dir))
         self.image_processor = image_processor or AutoImageProcessor.from_pretrained(model_name)
         self.indices = self._build_indices(shots_per_class, val_per_class, seed)
         self.transform = self._build_augmentation() if augment else None
 
+    def _all_labels(self) -> list[int]:
+        return [int(label) for label in self.dataset.targets]
+
     def _build_indices(
         self, shots_per_class: Optional[int], val_per_class: int, seed: int
     ) -> list[int]:
-        if self.split == "test":
-            return list(range(len(self.dataset)))
-
         by_class: dict[int, list[int]] = defaultdict(list)
-        for index, label in enumerate(self.dataset.targets):
+        for index, label in enumerate(self._all_labels()):
             by_class[int(label)].append(index)
 
         generator = torch.Generator().manual_seed(seed)
-        selected: list[int] = []
+        if self.split == "train":
+            selected: list[int] = []
+            for label in sorted(by_class):
+                label_indices = by_class[label]
+                order = torch.randperm(len(label_indices), generator=generator).tolist()
+                pool = [label_indices[position] for position in order]
+                if shots_per_class is not None:
+                    if len(pool) < shots_per_class:
+                        raise ValueError(
+                            f"class {label} only has {len(pool)} training images, "
+                            f"requested {shots_per_class}"
+                        )
+                    pool = pool[:shots_per_class]
+                selected.extend(pool)
+            return sorted(selected)
+
         validation: list[int] = []
+        test: list[int] = []
         for label in sorted(by_class):
             label_indices = by_class[label]
             order = torch.randperm(len(label_indices), generator=generator).tolist()
             if val_per_class >= len(order):
                 raise ValueError(
-                    f"val_per_class={val_per_class} leaves no training images for class {label}"
+                    f"val_per_class={val_per_class} leaves no test images for class {label}"
                 )
             validation.extend(label_indices[position] for position in order[:val_per_class])
-            pool = [label_indices[position] for position in order[val_per_class:]]
-            if self.split == "val":
-                continue
-            if shots_per_class is not None:
-                if len(pool) < shots_per_class:
-                    raise ValueError(
-                        f"class {label} only has {len(pool)} training images, "
-                        f"requested {shots_per_class}"
-                    )
-                pool = pool[:shots_per_class]
-            selected.extend(pool)
+            test.extend(label_indices[position] for position in order[val_per_class:])
 
-        return sorted(validation if self.split == "val" else selected)
+        return sorted(validation if self.split == "val" else test)
 
     def _build_augmentation(self) -> transforms.Compose:
         size = processor_size(self.image_processor)
@@ -211,7 +221,8 @@ class CIFAR100FewShot(Dataset):
 
     @property
     def labels(self) -> list[int]:
-        return [int(self.dataset.targets[index]) for index in self.indices]
+        all_labels = self._all_labels()
+        return [all_labels[index] for index in self.indices]
 
     def __len__(self) -> int:
         return len(self.indices)
@@ -236,26 +247,26 @@ def build_datasets(cfg: Config):
         seed=cfg.seed,
         model_name=cfg.model_name,
         image_processor=processor,
-        download=True,
     )
-    if cfg.dataset == "cifar100":
-        common["root"] = str(root / "cifar100")
+    if cfg.dataset == "oxfordiiitpet":
+        common["root"] = str(root)
         common["val_per_class"] = cfg.val_per_class
-        train = CIFAR100FewShot(
+        train = OxfordIIITPetFewShot(
             split="train", shots_per_class=cfg.shots_per_class, augment=True, **common
         )
-        train_eval = CIFAR100FewShot(
+        train_eval = OxfordIIITPetFewShot(
             split="train", shots_per_class=cfg.shots_per_class, augment=False, **common
         )
-        val = CIFAR100FewShot(
+        val = OxfordIIITPetFewShot(
             split="val", shots_per_class=None, augment=False, **common
         )
-        test = CIFAR100FewShot(
+        test = OxfordIIITPetFewShot(
             split="test", shots_per_class=None, augment=False, **common
         )
         return processor, train, train_eval, val, test
 
     common["root"] = str(root)
+    common["download"] = True
     train = Flowers102FewShot(
         split="train", shots_per_class=cfg.shots_per_class, augment=True, **common
     )

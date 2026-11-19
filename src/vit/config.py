@@ -9,9 +9,14 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 METHODS = ("full", "lp", "lora", "bitfit", "ncm")
 METHOD_ALIASES = {"peft": "lora", "zs": "ncm"}
 
-DATASETS = ("flowers102", "cifar100")
-DATASET_ALIASES = {"cifar-100": "cifar100", "cifar_100": "cifar100", "flowers": "flowers102"}
-DATASET_CLASSES = {"flowers102": 102, "cifar100": 100}
+DATASETS = ("flowers102", "oxfordiiitpet")
+DATASET_ALIASES = {
+    "flowers": "flowers102",
+    "pets": "oxfordiiitpet",
+    "oxford-pets": "oxfordiiitpet",
+    "oxford_iiit_pet": "oxfordiiitpet",
+}
+DATASET_CLASSES = {"flowers102": 102, "oxfordiiitpet": 37}
 
 
 def normalize_dataset(name: str) -> str:
@@ -48,7 +53,7 @@ class Config:
     dataset: str = "flowers102"
     data_root: str = "data"
     num_classes: int = 102
-    shots_per_class: int | None = 10
+    shots_per_class: int | None = None
     val_per_class: int = 10
     seed: int = 42
     batch_size: int = 16
@@ -90,11 +95,11 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--model-name", default="google/vit-base-patch16-224")
     parser.add_argument("--data-root", default="data")
     parser.add_argument("--dataset", default="flowers102",
-                        help="Dataset: flowers102 | cifar100 (aliases: cifar-100)")
-    parser.add_argument("--shots-per-class", type=int, default=10,
-                        help="Training examples per class; 0 uses the full training split")
+                        help="Dataset: flowers102 | oxfordiiitpet (aliases: flowers, pets)")
+    parser.add_argument("--shots-per-class", type=int, default=None,
+                        help="Training examples per class; omit or 0 uses the full training split")
     parser.add_argument("--val-per-class", type=int, default=10,
-                        help="CIFAR-100 validation images carved out per class")
+                        help="Validation images held out per class (Oxford-IIIT Pet)")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--num-workers", type=int, default=4)

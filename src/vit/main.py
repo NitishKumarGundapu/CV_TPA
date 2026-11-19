@@ -264,7 +264,7 @@ def run_report(args: argparse.Namespace) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Few-shot Flowers102 adaptation of a ViT foundation model",
+        description="Few-shot Flowers102 / Oxford-IIIT Pet adaptation of a ViT foundation model",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
