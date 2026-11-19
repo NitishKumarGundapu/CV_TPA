@@ -14,7 +14,7 @@ MODEL_NAME="${MODEL_NAME:-google/vit-base-patch16-224}"
 DATA_ROOT="${DATA_ROOT:-data}"
 DATASET="${DATASET:-flowers102}"
 SHOTS_PER_CLASS="${SHOTS_PER_CLASS:-0}"  # 0 uses the full training split
-VAL_PER_CLASS="${VAL_PER_CLASS:-10}"
+VAL_FRACTION="${VAL_FRACTION:-0.2}"
 SEED="${SEED:-42}"
 BATCH_SIZE="${BATCH_SIZE:-16}"
 NUM_WORKERS="${NUM_WORKERS:-4}"
@@ -51,7 +51,7 @@ fi
   --data-root "${DATA_ROOT}" \
   --dataset "${DATASET}" \
   --shots-per-class "${SHOTS_PER_CLASS}" \
-  --val-per-class "${VAL_PER_CLASS}" \
+  --val-fraction "${VAL_FRACTION}" \
   --seed "${SEED}" \
   --batch-size "${BATCH_SIZE}" \
   --num-workers "${NUM_WORKERS}" \

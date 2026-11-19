@@ -118,9 +118,9 @@ class OxfordIIITPetFewShot(Dataset):
 
     Expects the ``ImageFolder`` layout ``data/oxford_pet/{train,test}/<class>/*.jpg``.
     Training uses the full ``train`` folder unless ``shots_per_class`` is set.
-    There is no validation folder, so ``val_per_class`` images are held out
-    deterministically per class from ``test``; the remaining test images form the
-    test split.
+    There is no validation folder, so ``val_fraction`` (default 20%) of each
+    class's test images is held out deterministically for validation; the
+    remaining test images form the test split.
     """
 
     _SPLITS = {
@@ -136,7 +136,7 @@ class OxfordIIITPetFewShot(Dataset):
         root: str,
         split: str = "train",
         shots_per_class: Optional[int] = 10,
-        val_per_class: int = 10,
+        val_fraction: float = 0.2,
         seed: int = 42,
         transform=None,
     ):
@@ -144,8 +144,8 @@ class OxfordIIITPetFewShot(Dataset):
             raise ValueError(f"split must be one of {tuple(self._SPLITS)}, got {split!r}")
         if shots_per_class is not None and shots_per_class < 1:
             raise ValueError("shots_per_class must be a positive integer or None")
-        if val_per_class < 1:
-            raise ValueError("val_per_class must be a positive integer")
+        if not 0 < val_fraction < 1:
+            raise ValueError("val_fraction must be between 0 and 1")
         if transform is None:
             raise ValueError("transform is required")
 
@@ -153,13 +153,13 @@ class OxfordIIITPetFewShot(Dataset):
         split_dir = "train" if self.split == "train" else "test"
         self.dataset = ImageFolder(str(Path(root) / "oxford_pet" / split_dir))
         self.transform = transform
-        self.indices = self._build_indices(shots_per_class, val_per_class, seed)
+        self.indices = self._build_indices(shots_per_class, val_fraction, seed)
 
     def _all_labels(self) -> list[int]:
         return [int(label) for label in self.dataset.targets]
 
     def _build_indices(
-        self, shots_per_class: Optional[int], val_per_class: int, seed: int
+        self, shots_per_class: Optional[int], val_fraction: float, seed: int
     ) -> list[int]:
         by_class: dict[int, list[int]] = defaultdict(list)
         for index, label in enumerate(self._all_labels()):
@@ -187,12 +187,13 @@ class OxfordIIITPetFewShot(Dataset):
         for label in sorted(by_class):
             label_indices = by_class[label]
             order = torch.randperm(len(label_indices), generator=generator).tolist()
-            if val_per_class >= len(order):
+            val_count = max(1, int(round(val_fraction * len(order))))
+            if val_count >= len(order):
                 raise ValueError(
-                    f"val_per_class={val_per_class} leaves no test images for class {label}"
+                    f"val_fraction={val_fraction} leaves no test images for class {label}"
                 )
-            validation.extend(label_indices[position] for position in order[:val_per_class])
-            test.extend(label_indices[position] for position in order[val_per_class:])
+            validation.extend(label_indices[position] for position in order[:val_count])
+            test.extend(label_indices[position] for position in order[val_count:])
 
         return sorted(validation if self.split == "val" else test)
 
@@ -221,7 +222,7 @@ def build_datasets(cfg: Config):
         common = dict(
             root=str(root),
             seed=cfg.seed,
-            val_per_class=cfg.val_per_class,
+            val_fraction=cfg.val_fraction,
         )
         train = OxfordIIITPetFewShot(
             split="train",

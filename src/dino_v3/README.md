@@ -38,8 +38,8 @@ Oxford-IIIT Pet is available with `--dataset oxfordiiitpet`. It is loaded with
 `torchvision.datasets.ImageFolder` from `data/oxford_pet/{train,test}/<class>/`.
 Training uses the full `train` folder (37 classes, roughly 100 images/class)
 unless `--shots-per-class` is set. There is no validation folder, so
-`--val-per-class` (default 10) images per class are held out deterministically
-from `test` for validation; the remaining test images form the test split.
+`--val-fraction` (default 0.2) of each class's test images is held out
+deterministically for validation; the remaining test images form the test split.
 
 ## Results (CIFAR-100, 10 shots/class, seed 42)
 

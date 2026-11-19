@@ -54,7 +54,7 @@ class Config:
     data_root: str = "data"
     num_classes: int = 102
     shots_per_class: int | None = None
-    val_per_class: int = 10
+    val_fraction: float = 0.2
     seed: int = 42
     batch_size: int = 16
     num_workers: int = 4
@@ -78,8 +78,8 @@ class Config:
         self.num_classes = DATASET_CLASSES[self.dataset]
         if self.shots_per_class is not None and self.shots_per_class < 1:
             raise ValueError("shots_per_class must be a positive integer")
-        if self.val_per_class < 1:
-            raise ValueError("val_per_class must be a positive integer")
+        if not 0 < self.val_fraction < 1:
+            raise ValueError("val_fraction must be between 0 and 1")
         if self.num_classes < 2:
             raise ValueError("num_classes must be >= 2")
 
@@ -99,8 +99,9 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
                         help="Dataset: flowers102 | oxfordiiitpet (aliases: flowers, pets)")
     parser.add_argument("--shots-per-class", type=int, default=None,
                         help="Training examples per class; omit or 0 uses the full training split")
-    parser.add_argument("--val-per-class", type=int, default=10,
-                        help="Validation images held out per class (Oxford-IIIT Pet)")
+    parser.add_argument("--val-fraction", type=float, default=0.2,
+                        help="Fraction of each class's test images held out for validation "
+                             "(Oxford-IIIT Pet)")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--num-workers", type=int, default=4)

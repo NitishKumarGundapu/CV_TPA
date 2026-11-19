@@ -39,7 +39,7 @@ COMMON_FLAGS = [
     ("model_name", "--model-name"),
     ("data_root", "--data-root"),
     ("shots_per_class", "--shots-per-class"),
-    ("val_per_class", "--val-per-class"),
+    ("val_fraction", "--val-fraction"),
     ("seed", "--seed"),
     ("batch_size", "--batch-size"),
     ("num_workers", "--num-workers"),

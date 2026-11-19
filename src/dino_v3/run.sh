@@ -1,4 +1,3 @@
-```bash
 #!/usr/bin/env bash
 
 set -euo pipefail
@@ -27,8 +26,8 @@ DATASET="${DATASET:-flowers102}"
 # 0 means use all available training samples.
 SHOTS_PER_CLASS="${SHOTS_PER_CLASS:-0}"
 
-# Number of validation samples selected per class.
-VAL_PER_CLASS="${VAL_PER_CLASS:-10}"
+# Fraction of each class's test images held out for validation.
+VAL_FRACTION="${VAL_FRACTION:-0.2}"
 
 SEED="${SEED:-42}"
 
@@ -99,13 +98,9 @@ LIMIT_BATCHES="${LIMIT_BATCHES:-1.0}"
 # Otherwise, use the system Python.
 
 if command -v conda >/dev/null 2>&1; then
-
     PYTHON=(conda run --no-capture-output -n "${CONDA_ENV}" python)
-
 else
-
     PYTHON=(python)
-
 fi
 
 
@@ -127,36 +122,27 @@ fi
 # ============================================================
 
 "${PYTHON[@]}" -m src.dino_v3.main sweep \
-
     --model-name "${MODEL_NAME}" \
     --data-root "${DATA_ROOT}" \
     --dataset "${DATASET}" \
-
     --shots-per-class "${SHOTS_PER_CLASS}" \
-    --val-per-class "${VAL_PER_CLASS}" \
+    --val-fraction "${VAL_FRACTION}" \
     --seed "${SEED}" \
-
     --batch-size "${BATCH_SIZE}" \
     --num-workers "${NUM_WORKERS}" \
     --epochs "${EPOCHS}" \
     --patience "${PATIENCE}" \
-
     --lr "${LR}" \
     --weight-decay "${WEIGHT_DECAY}" \
-
     --lora-r "${LORA_R}" \
     --lora-alpha "${LORA_ALPHA}" \
     --lora-dropout "${LORA_DROPOUT}" \
-
     --log-dir "${LOG_DIR}" \
     --results-dir "${RESULTS_DIR}" \
-
     --tsne-samples "${TSNE_SAMPLES}" \
     --grad-cam-samples "${GRAD_CAM_SAMPLES}" \
     --max-eval-batches "${MAX_EVAL_BATCHES}" \
     --limit-batches "${LIMIT_BATCHES}" \
-
     --methods "${METHOD_LIST[@]}" \
     "${SKIP_ARGS[@]}" \
     "$@"
-```
