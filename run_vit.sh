@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run all ViT adaptation methods for 10 epochs on the full training split of
-# both datasets, then evaluate every method on the full test split.
+# Run all ViT adaptation methods for 20 epochs with few-shot training
+# (flowers102: 5 shots/class, oxfordiiitpet: 10 shots/class), then evaluate
+# every method on the full test split.
 #
 #   results:  results/vit/<dataset>/<method>/seed_<seed>/
 #   analysis: results/analysis/<dataset>/vit/
@@ -22,17 +23,26 @@ else
 fi
 
 for DATASET in "${DATASETS[@]}"; do
-    echo "=== ViT / ${DATASET}: methods=${METHODS[*]} epochs=10 batch=32 full-train ==="
+    case "${DATASET}" in
+        flowers102) SHOTS_PER_CLASS=5 ;;
+        oxfordiiitpet) SHOTS_PER_CLASS=10 ;;
+        *)
+            echo "Unknown dataset: ${DATASET}" >&2
+            exit 1
+            ;;
+    esac
+
+    echo "=== ViT / ${DATASET}: methods=${METHODS[*]} epochs=20 batch=32 shots-per-class=${SHOTS_PER_CLASS} ==="
     "${PYTHON[@]}" -m src.vit.main sweep \
         --dataset "${DATASET}" \
         --methods "${METHODS[@]}" \
-        --shots-per-class 0 \
+        --shots-per-class "${SHOTS_PER_CLASS}" \
         --val-fraction 0.2 \
-        --epochs 10 \
+        --epochs 20 \
         --batch-size 32 \
         --data-root data \
         --results-dir results/vit \
-        --log-dir src/vit/logs
+        --log-dir logs/vit/
 done
 
 "${PYTHON[@]}" build_analysis.py

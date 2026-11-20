@@ -389,7 +389,7 @@ def confusion_grid(runs: dict) -> None:
         ("vit", "flowers102", "ncm"),
         ("dino_v3", "flowers102", "ncm"),
         ("vit", "oxfordiiitpet", "full"),
-        ("dino_v3", "oxfordiiitpet", "bitfit"),
+        ("dino_v3", "oxfordiiitpet", "ncm"),
     ]
     figure, axes = plt.subplots(2, 2, figsize=(12, 4.6))
     figure.subplots_adjust(left=0.07, right=0.87, bottom=0.13, top=0.90, wspace=0.22, hspace=0.55)
@@ -486,11 +486,11 @@ def efficiency_plot(runs: dict) -> None:
 # Architecture images
 # --------------------------------------------------------------------------- #
 def architecture_images() -> None:
-    vit_source = ROOT / "vit_arch.png"
+    vit_source = ROOT / "archs" / "vit_arch.png"
     vit_target = FIG / "vit_arch.png"
     Image.open(vit_source).convert("RGB").save(vit_target)
 
-    dino_source = ROOT / "dino_v3.webp"
+    dino_source = ROOT / "archs" / "dino_v3.webp"
     dino_target = FIG / "dino_v3.png"
     image = Image.open(dino_source).convert("RGBA")
     canvas = Image.new("RGB", image.size, "white")

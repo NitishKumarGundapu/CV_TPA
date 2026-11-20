@@ -245,8 +245,8 @@ def dataset_samples() -> None:
 
 
 def architecture_images() -> None:
-    Image.open(ROOT / "vit_arch.png").convert("RGB").save(FIG / "fig_arch_vit.png")
-    image = Image.open(ROOT / "dino_v3.webp").convert("RGBA")
+    Image.open(ROOT / "archs" / "vit_arch.png").convert("RGB").save(FIG / "fig_arch_vit.png")
+    image = Image.open(ROOT / "archs" / "dino_v3.webp").convert("RGBA")
     canvas = Image.new("RGB", image.size, "white")
     canvas.paste(image, mask=image.split()[-1])
     canvas.save(FIG / "fig_arch_dino.png")
@@ -433,7 +433,7 @@ def confusion(runs: dict) -> None:
         ("vit", "flowers102", "ncm"),
         ("dino_v3", "flowers102", "ncm"),
         ("vit", "oxfordiiitpet", "full"),
-        ("dino_v3", "oxfordiiitpet", "bitfit"),
+        ("dino_v3", "oxfordiiitpet", "ncm"),
     ]
     figure, axes = plt.subplots(2, 2, figsize=(7.0, 4.4))
     figure.subplots_adjust(left=0.08, right=0.86, bottom=0.13, top=0.90, wspace=0.24, hspace=0.55)
@@ -609,14 +609,22 @@ def _per_run_rows(runs: dict) -> str:
             for method in METHODS:
                 record = runs[(family, dataset, method)]
                 checkpoint = record.get("checkpoint")
+                epoch = "--"
+                best_val_text = "--"
                 if checkpoint:
-                    stem = Path(checkpoint).stem
-                    parts = stem.split("-")
-                    epoch = parts[1] if len(parts) > 1 else "--"
-                    best_val_text = parts[2] if len(parts) > 2 else "--"
-                else:
-                    epoch = "--"
-                    best_val_text = "--"
+                    best_val = record.get("best_val_loss")
+                    if best_val is not None:
+                        best_val_text = f"{best_val:.4f}"
+                    metrics_csv = Path(checkpoint).parents[1] / "metrics.csv"
+                    if metrics_csv.exists():
+                        epochs = deck.parse_epochs(metrics_csv)
+                        val_epochs = [
+                            (values["val_loss"], index)
+                            for index, values in epochs.items()
+                            if "val_loss" in values
+                        ]
+                        if val_epochs:
+                            epoch = f"{min(val_epochs)[1]:02d}"
                 lines.append(
                     " & ".join(
                         [

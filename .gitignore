@@ -6,3 +6,4 @@ src/vit/__pycache__
 src/vit/logs
 src/dino_v3/logs
 .commandcode
+logs

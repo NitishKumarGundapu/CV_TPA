@@ -130,7 +130,7 @@
     \midrule
     Classes & 102 flower species & 37 cat/dog breeds \\
     Images & 8{,}189 & 7{,}349 (3{,}680 train + 3{,}669 test) \\
-    Train split & 1{,}020 (official, 10/class) & 3{,}680 (full train) \\
+    Train split & 510 (5/class, from 1{,}020) & 370 (10/class, from 3{,}680) \\
     Validation & 1{,}020 (official) & 735 (20\% of test, stratified) \\
     Test split & 6{,}149 (official) & 2{,}934 (remaining 80\%) \\
     Input resolution & $224\times224$ (ViT) & $224\times224$ (ViT) \\
@@ -145,7 +145,7 @@
       \textbf{Protocol}
       \begin{itemize}
         \item Seed 42; deterministic, class-stratified splits.
-        \item Flowers102's official train split is already 10 images/class; Pet uses its full train split as the labeled pool.
+        \item Fixed label budget: \textbf{5 images/class} on Flowers102 and \textbf{10 images/class} on Pet (510 and 370 training images).
         \item Augmentation: RandomResizedCrop (scale 0.65--1.0), horizontal flip, model-specific normalization.
         \item No colour jitter, keeping the comparison close to a standard linear-probe protocol.
       \end{itemize}
@@ -153,7 +153,7 @@
     \begin{column}{0.45\textwidth}
       \begin{block}{Why these datasets?}
         \footnotesize
-        Flowers102 is saturated by strong pretrained features and tests the low-label regime directly. Oxford-IIIT Pet is harder: 37 fine-grained breeds, large pose/background variation, and visible cat/dog confusion.
+        Frozen features are already strong on Flowers102, so it isolates the low-label regime. Oxford-IIIT Pet is harder: 37 fine-grained breeds, large pose/background variation, and visible cat/dog confusion.
       \end{block}
     \end{column}
   \end{columns}
@@ -169,7 +169,7 @@
   {\footnotesize
   \begin{itemize}
     \item Fine-grained differences in petal shape, colour, and inflorescence; backgrounds, scale, and illumination vary widely.
-    \item The official training split contains only \textbf{10 images per class}, so this is the few-shot setting by construction.
+    \item The official training split contains only \textbf{10 images per class}; each run trains on a deterministic \textbf{5-image-per-class} subset.
   \end{itemize}}
 \end{frame}
 
@@ -182,7 +182,7 @@
   \vspace{-0.12cm}
   {\footnotesize
   \begin{itemize}
-    \item 25 dog and 12 cat breeds; roughly 200 images per class, with large intra-class variation in pose, coat, and background.
+    \item 25 dog and 12 cat breeds; roughly 200 images per class, with large intra-class variation in pose, coat, and background. Each run trains on \textbf{10 images per class}.
     \item Visually similar breeds and cat/dog confusion make Pet substantially harder than Flowers102 for frozen features.
   \end{itemize}}
 \end{frame}
@@ -258,13 +258,13 @@
     \begin{column}{0.48\textwidth}
       \begin{block}{NCM in the few-label regime}
         \footnotesize
-        One prototype per class is estimated from just 10 (Flowers102) or $\sim$99 (Pet) labelled images; no optimiser, no epochs, no checkpoint selection.
+        One prototype per class is estimated from just 5 (Flowers102) or 10 (Pet) labelled images; no optimiser, no epochs, no checkpoint selection.
       \end{block}
     \end{column}
     \begin{column}{0.48\textwidth}
       \begin{block}{Cost of NCM}
         \footnotesize
-        Zero trainable parameters and a single feature-extraction pass: 6--25\,s and 0.62--0.70\,GB at evaluation time.
+        Zero trainable parameters and a single feature-extraction pass: 6.6--12.8\,s and 0.62--0.70\,GB at evaluation time.
       \end{block}
     \end{column}
   \end{columns}
@@ -294,7 +294,7 @@
       \end{block}
       \begin{block}{Why low rank?}
         \footnotesize
-        The adaptation is expected to be low-dimensional: LoRA trains 0.7--1.1M parameters (0.7--1.1\%) while leaving the pretrained representation almost untouched.
+        The adaptation is expected to be low-dimensional: LoRA trains 0.62--0.96M parameters (0.7--1.1\%) while leaving the pretrained representation almost untouched.
       \end{block}
     \end{column}
     \begin{column}{0.46\textwidth}
@@ -344,7 +344,7 @@
         Weight decay & 0.05 \\
         Schedule & cosine annealing \\
         Batch size & 32 \\
-        Epochs & 10 \\
+        Epochs & 20 \\
         \bottomrule
       \end{tabular}
     \end{column}
@@ -371,6 +371,7 @@
     \footnotesize
     \begin{itemize}
       \item The four trained methods share the \emph{same} optimiser, learning rate, schedule, epochs, and batch size; only the trainable parameter set differs.
+      \item Fixed label budget: 5 images/class on Flowers102 and 10 images/class on Pet (510 and 370 training images).
       \item NCM has no optimiser and no epochs: it is a single feature-extraction pass followed by prototype assignment.
       \item The best checkpoint is selected on validation loss.
     \end{itemize}
@@ -386,8 +387,8 @@
   \vspace{-0.15cm}
   {\footnotesize
   \begin{itemize}
-    \item \textbf{Full} converges fastest in loss: val loss 0.240, val accuracy 98.73\%, test accuracy 98.28\%.
-    \item \textbf{LP} underfits (92.54\% test, val loss 2.17); \textbf{LoRA} (97.30\%) and \textbf{BitFit} (95.87\%) beat it by 3.3--6.4 points.
+    \item \textbf{Full} converges fastest in loss: val loss 0.455, val accuracy 97.35\%, test accuracy 96.55\%.
+    \item \textbf{LP} is weakest but far from collapsing (92.00\% test, val loss 2.25); \textbf{LoRA} (96.68\%) and \textbf{BitFit} (95.22\%) beat it by 3.2--4.7 points. All trained runs pick epoch 19.
   \end{itemize}}
 \end{frame}
 
@@ -400,8 +401,8 @@
   \vspace{-0.15cm}
   {\footnotesize
   \begin{itemize}
-    \item \textbf{Full}: 93.18\% test / 92.65\% val (val loss 0.288); its best checkpoint is epoch 7, not 9.
-    \item \textbf{LoRA} has the best validation accuracy (93.20\%) but Full generalises slightly better (93.18\% vs 92.98\%); \textbf{LP} is weakest at 92.02\%.
+    \item \textbf{Full}: 88.10\% test / 87.89\% val (val loss 0.610), selected at epoch 19 like the other trained runs.
+    \item \textbf{LoRA} is the best parameter-efficient method (86.61\%), only 1.5 points behind Full; \textbf{LP} is weakest at 81.15\%, with BitFit at 84.19\%.
   \end{itemize}}
 \end{frame}
 
@@ -414,8 +415,8 @@
   \vspace{-0.15cm}
   {\footnotesize
   \begin{itemize}
-    \item \textbf{Full}: 98.88\% test / 98.63\% val (val loss 0.255); train loss falls to $6\times10^{-3}$.
-    \item \textbf{LoRA} (97.87\%) and \textbf{BitFit} (96.39\%) beat \textbf{LP} (94.52\%); \textbf{NCM} (not shown) is training-free and best at 99.69\%.
+    \item \textbf{Full}: 97.01\% test / 97.45\% val (val loss 0.455); train loss falls to 0.046.
+    \item \textbf{LoRA} (96.39\%) and \textbf{BitFit} (95.40\%) are close behind and beat \textbf{LP} (93.72\%); \textbf{NCM} (not shown) is training-free and best at 99.71\%.
   \end{itemize}}
 \end{frame}
 
@@ -425,11 +426,11 @@
 \begin{frame}[t]{DINOv3-B/16 on Oxford-IIIT Pet: Optimisation Traces}
   \centering
   \includegraphics[width=\linewidth]{loss_dino_v3_oxfordiiitpet.png}
-  \vspace{-0.15cm}
+  \vspace{-0.32cm}
   {\footnotesize
   \begin{itemize}
-    \item \textbf{BitFit} is the best test result (95.16\%) at 0.12\% of the parameters; \textbf{Full} reaches 95.02\% and peaks at epoch 4 before overfitting.
-    \item All five methods lie within 0.9 points; the frozen representation is already near-optimal.
+    \item \textbf{Full fine-tuning overfits}: 46.59\% test / 50.88\% val, with train loss 0.156 vs val loss 1.85; its best checkpoint is epoch 17.
+    \item \textbf{LoRA} is the best trained method (84.80\%), ahead of BitFit (79.45\%) and LP (75.90\%); \textbf{NCM} reaches 93.69\% on the frozen features.
   \end{itemize}}
 \end{frame}
 
@@ -451,17 +452,17 @@
         \toprule
         Method & Data & Prec & Rec & F1 & Acc \\
         \midrule
-        Full & Flowers & 98.17 & \cellcolor{best}98.84 & \cellcolor{best}98.46 & 98.28 \\
-        LP & Flowers & 91.22 & 92.10 & 91.07 & 92.54 \\
-        LoRA & Flowers & 96.78 & 97.37 & 96.88 & 97.30 \\
-        BitFit & Flowers & 94.95 & 95.55 & 94.84 & 95.87 \\
-        NCM & Flowers & \cellcolor{best}98.19 & 98.60 & 98.33 & \cellcolor{best}98.59 \\
+        Full & Flowers & 96.14 & 97.61 & 96.74 & 96.55 \\
+        LP & Flowers & 90.33 & 91.50 & 90.33 & 92.00 \\
+        LoRA & Flowers & 95.86 & 96.65 & 96.07 & 96.68 \\
+        BitFit & Flowers & 93.91 & 94.78 & 93.88 & 95.22 \\
+        NCM & Flowers & \cellcolor{best}97.99 & \cellcolor{best}98.46 & \cellcolor{best}98.15 & \cellcolor{best}98.44 \\
         \midrule
-        Full & Pet & \cellcolor{best}93.23 & \cellcolor{best}93.10 & \cellcolor{best}93.07 & \cellcolor{best}93.18 \\
-        LP & Pet & 92.16 & 91.99 & 91.95 & 92.02 \\
-        LoRA & Pet & 93.11 & 92.92 & 92.92 & 92.98 \\
-        BitFit & Pet & 92.72 & 92.58 & 92.53 & 92.60 \\
-        NCM & Pet & 92.64 & 92.20 & 92.21 & 92.23 \\
+        Full & Pet & 88.27 & 88.00 & 87.79 & 88.10 \\
+        LP & Pet & 81.53 & 81.05 & 80.95 & 81.15 \\
+        LoRA & Pet & 87.07 & 86.55 & 86.47 & 86.61 \\
+        BitFit & Pet & 84.43 & 84.11 & 83.97 & 84.19 \\
+        NCM & Pet & \cellcolor{best}91.85 & \cellcolor{best}91.45 & \cellcolor{best}91.40 & \cellcolor{best}91.48 \\
         \bottomrule
       \end{tabular}
     \end{column}
@@ -474,24 +475,24 @@
         \toprule
         Method & Data & Prec & Rec & F1 & Acc \\
         \midrule
-        Full & Flowers & 98.79 & 98.76 & 98.73 & 98.88 \\
-        LP & Flowers & 94.22 & 94.90 & 93.99 & 94.52 \\
-        LoRA & Flowers & 97.49 & 98.01 & 97.62 & 97.87 \\
-        BitFit & Flowers & 96.08 & 96.33 & 95.84 & 96.39 \\
-        NCM & Flowers & \cellcolor{best}99.60 & \cellcolor{best}99.70 & \cellcolor{best}99.63 & \cellcolor{best}99.69 \\
+        Full & Flowers & 96.91 & 97.53 & 97.11 & 97.01 \\
+        LP & Flowers & 93.06 & 93.42 & 92.50 & 93.72 \\
+        LoRA & Flowers & 96.18 & 96.70 & 96.19 & 96.39 \\
+        BitFit & Flowers & 94.65 & 94.92 & 94.33 & 95.40 \\
+        NCM & Flowers & \cellcolor{best}99.65 & \cellcolor{best}99.71 & \cellcolor{best}99.66 & \cellcolor{best}99.71 \\
         \midrule
-        Full & Pet & 95.06 & 94.99 & 94.96 & 95.02 \\
-        LP & Pet & 94.95 & 94.79 & 94.73 & 94.89 \\
-        LoRA & Pet & 94.27 & 94.18 & 94.11 & 94.24 \\
-        BitFit & Pet & \cellcolor{best}95.29 & \cellcolor{best}95.07 & \cellcolor{best}95.03 & \cellcolor{best}95.16 \\
-        NCM & Pet & 95.02 & 94.66 & 94.60 & 94.75 \\
+        Full & Pet & 47.14 & 46.49 & 45.98 & 46.59 \\
+        LP & Pet & 77.77 & 75.87 & 75.34 & 75.90 \\
+        LoRA & Pet & 86.16 & 84.75 & 84.51 & 84.80 \\
+        BitFit & Pet & 81.17 & 79.42 & 78.94 & 79.45 \\
+        NCM & Pet & \cellcolor{best}93.66 & \cellcolor{best}93.57 & \cellcolor{best}93.50 & \cellcolor{best}93.69 \\
         \bottomrule
       \end{tabular}
     \end{column}
   \end{columns}
 
   \vspace{0.12cm}
-  {\tiny Top-5 accuracy is 98.24--99.93\% across all 20 runs; macro precision, recall, and F1 are unweighted means over classes.}
+  {\tiny Top-5 accuracy is 80.67--99.93\% across all 20 runs; macro precision, recall, and F1 are unweighted means over classes.}
 \end{frame}
 
 % --------------------------------------------------------------------------- %
@@ -503,8 +504,8 @@
   \vspace{-0.15cm}
   {\footnotesize
   \begin{itemize}
-    \item \textbf{Flowers102}: the diagonal is almost clean; DINOv3 NCM is the cleanest (99.69\%), and remaining errors are between visually similar species.
-    \item \textbf{Oxford Pet}: off-diagonal cat/dog and breed confusions; DINOv3 BitFit is best (95.16\%), ViT Full reaches 93.18\%. Matrices are row-normalised (diagonal = per-class recall).
+    \item \textbf{Flowers102}: the NCM diagonal is almost clean (ViT 98.44\%, DINOv3 99.71\%); remaining errors are between visually similar species.
+    \item \textbf{Oxford Pet}: off-diagonal cat/dog and breed confusions; DINOv3 NCM is best (93.69\%) and ViT Full reaches 88.10\%. The trained DINOv3 methods trail NCM by 9--21 points, so the Pet/DINOv3 panel shows NCM. Matrices are row-normalised (diagonal = per-class recall).
   \end{itemize}}
 \end{frame}
 
@@ -532,8 +533,8 @@
   \vspace{-0.18cm}
   {\footnotesize
   \begin{itemize}
-    \item Flowers102 forms tight, well-separated clusters even for LP and NCM, consistent with the saturated accuracy.
-    \item Pet clusters overlap more, especially between breeds; Full fine-tuning and LoRA sharpen the boundaries.
+    \item Flowers102 forms separable clusters even in the frozen-feature panels, consistent with NCM at 98.44\%.
+    \item On Pet the frozen features separate breeds clearly, yet the LP head reaches only 81.15\%; the head, not the representation, remains the bottleneck.
   \end{itemize}}
 \end{frame}
 
@@ -546,8 +547,8 @@
   \vspace{-0.18cm}
   {\footnotesize
   \begin{itemize}
-    \item Frozen DINOv3 features already form compact clusters under NCM and LP; this is why the training-free baseline is competitive.
-    \item Full fine-tuning does not visibly untangle Pet more than BitFit, matching the small accuracy gap between them.
+    \item Frozen DINOv3 features already form compact clusters under NCM and LP on both datasets; NCM reaches 93.69\% on Pet from those features.
+    \item Full fine-tuning on Pet produces an unstructured embedding cloud (46.59\% test), matching the overfit optimisation trace.
   \end{itemize}}
 \end{frame}
 
@@ -559,11 +560,11 @@
     \begin{column}{0.56\textwidth}
       \small
       \begin{itemize}
-        \item \textbf{Flowers102 is saturated}: every method is at least 92.5\%; DINOv3 NCM is best at 99.69\%.
-        \item \textbf{Oxford Pet is harder}: 92.0--95.2\%; DINOv3 BitFit is best at 95.16\%.
-        \item \textbf{Frozen DINOv3 features are strong}: DINOv3 LP reaches 94.89\% on Pet, beating ViT Full (93.18\%) with 0.03\% of the parameters.
-        \item \textbf{NCM is the efficiency winner}: zero parameters, best on Flowers102 (99.69\%), and within 0.41 points of the best Pet result.
-        \item \textbf{LoRA and BitFit close the gap}: 96.4--97.9\% on Flowers and 94.2--95.2\% on Pet at 0.1--1.1\% of the parameters.
+        \item \textbf{NCM wins all four combinations}: 98.44--99.71\% on Flowers102 and 91.48--93.69\% on Pet, with zero trainable parameters.
+        \item \textbf{Flowers102}: the trained methods are now competitive at 92.00--97.01\%; LoRA leads ViT (96.68\%) and full leads DINOv3 (97.01\%).
+        \item \textbf{Oxford Pet}: ViT Full reaches 88.10\% with LoRA 1.5 points behind; DINOv3 Full overfits (46.59\%), while LoRA is the best trained DINOv3 method (84.80\%).
+        \item \textbf{Frozen DINOv3 features are strong}: NCM gets 93.69\% on Pet versus 75.90\% for its LP head on the same features.
+        \item \textbf{LoRA and BitFit are close on Flowers102} (95.22--96.68\%) but trail full fine-tuning by 1.5--3.9 points on ViT/Pet.
       \end{itemize}
     \end{column}
     \begin{column}{0.42\textwidth}
@@ -574,17 +575,17 @@
         \toprule
         Setting & Best & Acc & Runner-up \\
         \midrule
-        ViT / Flowers & NCM & 98.59 & Full 98.28 \\
-        ViT / Pet & Full & 93.18 & LoRA 92.98 \\
-        DINOv3 / Flowers & NCM & 99.69 & Full 98.88 \\
-        DINOv3 / Pet & BitFit & 95.16 & Full 95.02 \\
+        ViT / Flowers & NCM & 98.44 & LoRA 96.68 \\
+        ViT / Pet & NCM & 91.48 & Full 88.10 \\
+        DINOv3 / Flowers & NCM & 99.71 & Full 97.01 \\
+        DINOv3 / Pet & NCM & 93.69 & LoRA 84.80 \\
         \bottomrule
       \end{tabular}
 
       \vspace{0.25cm}
       \begin{block}{Reading the table}
         \footnotesize
-        Every best result is either training-free (NCM) or extremely parameter-efficient (BitFit), except ViT on Pet.
+        Every best result is training-free (NCM). The best trained method is LoRA on ViT/Flowers and DINOv3/Pet, and full fine-tuning on ViT/Pet and DINOv3/Flowers.
       \end{block}
     \end{column}
   \end{columns}
@@ -599,10 +600,10 @@
   \vspace{-0.18cm}
   {\footnotesize
   \begin{itemize}
-    \item Full fine-tuning costs 141--488\,s and 5.0--7.4\,GB; LP costs 75--214\,s and 0.63--0.71\,GB; NCM costs 6--25\,s and 0.62--0.70\,GB.
-    \item On Pet, DINOv3 BitFit is on the Pareto frontier: 95.16\% at 103{,}717 parameters (0.12\%), 383\,s, 4.2\,GB.
-    \item On Flowers102, DINOv3 NCM dominates: 99.69\% at 0 parameters, 7.5\,s, 0.70\,GB.
-    \item Full fine-tuning is on the frontier only for ViT/Pet, where it is the best accuracy; elsewhere it is dominated.
+    \item Full fine-tuning costs 254--476\,s and 5.0--7.4\,GB; LP costs 187--267\,s and 0.63--0.71\,GB; NCM costs 6.6--12.8\,s and 0.62--0.70\,GB.
+    \item NCM is on the Pareto frontier in all four combinations: it is the most accurate method everywhere at zero trainable parameters.
+    \item On Flowers102, DINOv3 NCM reaches 99.71\% in 7.2\,s and 0.70\,GB; on Pet, 93.69\% in 11.4\,s.
+    \item Full fine-tuning is never the best overall choice; even on ViT/Pet it is dominated by NCM.
   \end{itemize}}
 \end{frame}
 
@@ -613,12 +614,12 @@
   \footnotesize
   \begin{enumerate}
     \setlength{\itemsep}{2pt}
-    \item \textbf{NCM beats full fine-tuning on Flowers102} for both backbones: ViT 98.59 vs 98.28; DINOv3 99.69 vs 98.88 --- with zero training and zero trainable parameters.
-    \item \textbf{BitFit edges out full fine-tuning on Pet} for DINOv3: 95.16 vs 95.02 at 0.12\% of the parameters.
-    \item \textbf{ViT LP is the weakest Flowers102 method} (92.54\%), yet ViT NCM reaches 98.59\% on the same frozen features. The head-only optimisation, not the representation, is the bottleneck.
-    \item \textbf{10.5$\times$ memory for at most 0.8 points}: DINOv3 Full uses 7.36\,GB vs 0.70\,GB for NCM; on Flowers it is also 0.81 points less accurate.
-    \item \textbf{Validation loss and accuracy disagree}: DINOv3 LoRA on Flowers has val loss 1.98 at 97.87\% test accuracy; a few confident errors dominate the loss.
-    \item \textbf{Top-5 accuracy is 98.2--99.9\% everywhere}: the remaining errors are top-1 confusions among visually similar classes, not failures to retrieve the right family.
+    \item \textbf{NCM beats every trained method} on both datasets and both backbones: ViT 98.44 vs 96.68 (Flowers) and 91.48 vs 88.10 (Pet); DINOv3 99.71 vs 97.01 (Flowers) and 93.69 vs 84.80 (Pet) --- with zero training and zero trainable parameters.
+    \item \textbf{DINOv3 full fine-tuning overfits on Pet}: 46.59\% test while ViT Full reaches 88.10\% on the same 370 images. Train loss 0.156 vs val loss 1.85, and the best checkpoint is epoch 17.
+    \item \textbf{Frozen DINOv3 features far outperform their LP head on Pet}: 93.69\% (NCM) vs 75.90\% (LP) on identical features; the head trained on 10 shots is still the bottleneck.
+    \item \textbf{10.5$\times$ memory for a much worse result}: DINOv3 Full uses 7.36\,GB vs 0.70\,GB for NCM; on Pet it is 47.1 points less accurate, and on Flowers 2.70 points less.
+    \item \textbf{ViT LP is the weakest Flowers102 method} (92.00\%), yet ViT NCM reaches 98.44\% on the same frozen features.
+    \item \textbf{DINOv3 Full on Pet has 80.67\% top-5 but 46.59\% top-1}: the right class is often retrieved but ranked poorly; elsewhere top-5 accuracy is 97.68--99.93\%.
   \end{enumerate}
 \end{frame}
 
@@ -631,18 +632,21 @@
 
   \vspace{0.2cm}
   \renewcommand{\arraystretch}{1.3}
-  \setlength{\tabcolsep}{5pt}
-  \small
+  \setlength{\tabcolsep}{4pt}
+  \scriptsize
   \begin{tabular}{lcccccc}
     \toprule
     Image & Ground truth & Full & LP & LoRA & BitFit & NCM \\
     \midrule
-    (a) & sweet william & sweet william & \textcolor{red}{geranium} & \textcolor{red}{geranium} & \textcolor{red}{geranium} & sweet william \\
-    (b) & carnation & carnation & \textcolor{red}{californian poppy} & carnation & carnation & carnation \\
-    (c) & pelargonium & \textcolor{red}{wallflower} & \textcolor{red}{geranium} & \textcolor{red}{geranium} & \textcolor{red}{geranium} & \textcolor{red}{sweet william} \\
+    (a) & sweet william & \textcolor{red}{prince of wales feathers} & \textcolor{red}{geranium} & \textcolor{red}{geranium} & \textcolor{red}{geranium} & \textcolor{red}{garden phlox} \\
+    (b) & carnation & carnation & \textcolor{red}{californian poppy} & \textcolor{red}{azalea} & \textcolor{red}{californian poppy} & carnation \\
+    (c) & pelargonium & \textcolor{red}{wallflower} & \textcolor{red}{geranium} & \textcolor{red}{geranium} & \textcolor{red}{geranium} & \textcolor{red}{geranium} \\
     (d) & geranium & geranium & geranium & geranium & geranium & geranium \\
     \bottomrule
   \end{tabular}
+
+  \vspace{0.08cm}
+  {\tiny Red entries are incorrect predictions; all methods are DINOv3-B/16.}
 \end{frame}
 
 % --------------------------------------------------------------------------- %
@@ -654,19 +658,22 @@
 
   \vspace{0.2cm}
   \renewcommand{\arraystretch}{1.3}
-  \setlength{\tabcolsep}{8pt}
-  \small
-  \begin{tabular}{lccccc}
+  \setlength{\tabcolsep}{4pt}
+  \scriptsize
+  \begin{tabular}{lcccccc}
     \toprule
-    Image & Full & LP & LoRA & BitFit & NCM \\
+    Image & Ground truth & Full & LP & LoRA & BitFit & NCM \\
     \midrule
-    (a) & beagle & great pyrenees & great pyrenees & great pyrenees & great pyrenees \\
-    (b) & shiba inu & shiba inu & shiba inu & shiba inu & shiba inu \\
-    (c) & beagle & beagle & beagle & beagle & beagle \\
-    (d) & bengal & egyptian mau & egyptian mau & bengal & egyptian mau \\
-    (e) & pomeranian & pomeranian & pomeranian & pomeranian & pomeranian \\
+    (a) & great pyrenees & \textcolor{red}{abyssinian} & \textcolor{red}{german shorthaired} & \textcolor{red}{leonberger} & \textcolor{red}{german shorthaired} & great pyrenees \\
+    (b) & shiba inu & \textcolor{red}{saint bernard} & shiba inu & shiba inu & shiba inu & shiba inu \\
+    (c) & beagle & \textcolor{red}{sphynx} & \textcolor{red}{english setter} & beagle & \textcolor{red}{english setter} & beagle \\
+    (d) & bengal & bengal & \textcolor{red}{abyssinian} & bengal & \textcolor{red}{abyssinian} & \textcolor{red}{egyptian mau} \\
+    (e) & pomeranian & \textcolor{red}{ragdoll} & \textcolor{red}{samoyed} & \textcolor{red}{samoyed} & \textcolor{red}{samoyed} & pomeranian \\
     \bottomrule
   \end{tabular}
+
+  \vspace{0.08cm}
+  {\tiny Red entries are incorrect predictions; all methods are DINOv3-B/16.}
 \end{frame}
 
 % --------------------------------------------------------------------------- %
@@ -680,7 +687,7 @@
   \begin{minipage}{0.88\textwidth}
     \begin{block}{Take-home message}
       \centering
-      In the low-label regime, the frozen representation matters more than the number of trainable parameters: start with NCM or linear probing, add LoRA/BitFit for harder domains, and reserve full fine-tuning for cases where its accuracy gain justifies the cost.
+      In the low-label regime, the frozen representation matters more than the number of trainable parameters: a training-free NCM classifier is the most accurate method on both datasets and both backbones. With a 20-epoch budget, full fine-tuning and LoRA become competitive on Flowers102 and ViT/Pet, but full DINOv3 fine-tuning overfits the ten-shot Pet training set.
     \end{block}
   \end{minipage}
   \vfill

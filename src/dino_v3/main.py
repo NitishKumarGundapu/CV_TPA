@@ -141,14 +141,15 @@ def run_train(cfg: Config) -> dict:
         if torch.cuda.is_available():
             torch.cuda.reset_peak_memory_stats()
         logger = pl.loggers.CSVLogger(
-            str(resolve_path(cfg.log_dir)), name=f"dinov3_classifier_{cfg.method}"
+            str(resolve_path(cfg.log_dir)),
+            name=f"{cfg.dataset}/dinov3_classifier_{cfg.method}",
         )
         checkpoint = pl.callbacks.ModelCheckpoint(
             monitor="val/loss",
             mode="min",
             save_top_k=1,
             save_last=True,
-            filename="best-{epoch:02d}-{val/loss:.4f}",
+            filename="best",
             auto_insert_metric_name=False,
         )
         callbacks = [
