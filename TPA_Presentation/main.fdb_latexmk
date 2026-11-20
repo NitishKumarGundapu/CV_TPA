@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1795187767.8233 "main.tex" "main.pdf" "main" 1795187769.42129 0
+["pdflatex"] 1795192851.32394 "main.tex" "main.pdf" "main" 1795192852.92597 0
   "/home/nitish/.TinyTeX/texmf-dist/fonts/tfm/jknappen/ec/tcss0800.tfm" 1136768653 1536 16418351df4369b7cef8f784ccb87a85 ""
   "/home/nitish/.TinyTeX/texmf-dist/fonts/tfm/jknappen/ec/tcss0900.tfm" 1136768653 1536 ba0169ee8bc017972775b933313cbbb0 ""
   "/home/nitish/.TinyTeX/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
@@ -226,10 +226,10 @@
   "figures/tsne_dino_v3.png" 1795186152.32048 399779 4f1ab51920f9137bde0393841ec6b0ae ""
   "figures/tsne_vit.png" 1795186146.18199 353100 45ed5adc6ed664ae717fc82eac73eb67 ""
   "figures/vit_arch.png" 1795186129.36063 165607 1d60984ce4a46d74e1d13946a12b37d8 ""
-  "main.aux" 1795187769.38334 3786 27b42bfa0e767eaa46e89b97e7f759c4 "pdflatex"
-  "main.nav" 1795187769.38376 2597 8d929ff01d0e977ef9f19206c5472659 "pdflatex"
-  "main.out" 1795187768.04534 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "main.tex" 1795187767.77228 32949 cf685cff709d615d111701b9d05ed4de ""
+  "main.aux" 1795192852.88799 3915 81fafe1f88badd64665aebd40176826b "pdflatex"
+  "main.nav" 1795192852.8896 2690 5474d22c5ffff884555771824040e220 "pdflatex"
+  "main.out" 1795192851.53977 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "main.tex" 1795192845.60847 35385 b249eb6153ab88adf1331fbe9547d15e ""
   (generated)
   "main.aux"
   "main.log"

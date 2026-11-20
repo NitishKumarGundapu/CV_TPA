@@ -467,6 +467,9 @@ INPUT ./figures/fig_pipeline_diagram.pdf
 INPUT ./figures/fig_pipeline_diagram.pdf
 INPUT ./figures/fig_pipeline_diagram.pdf
 INPUT /home/nitish/.TinyTeX/texmf-dist/fonts/tfm/public/cm/cmssbx10.tfm
+INPUT /home/nitish/.TinyTeX/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm
+INPUT /home/nitish/.TinyTeX/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
+INPUT /home/nitish/.TinyTeX/texmf-dist/fonts/tfm/public/cm/cmssi10.tfm
 INPUT ./figures/loss_vit_flowers102.png
 INPUT ./figures/loss_vit_flowers102.png
 INPUT ./figures/loss_vit_flowers102.png
@@ -513,9 +516,6 @@ INPUT ./figures/test_strip_oxfordiiitpet.png
 INPUT ./figures/test_strip_oxfordiiitpet.png
 INPUT /home/nitish/.TinyTeX/texmf-dist/fonts/tfm/public/cm/cmss17.tfm
 INPUT /home/nitish/.TinyTeX/texmf-dist/fonts/tfm/public/cm/cmssbx10.tfm
-INPUT /home/nitish/.TinyTeX/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm
-INPUT /home/nitish/.TinyTeX/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
-INPUT /home/nitish/.TinyTeX/texmf-dist/fonts/tfm/public/cm/cmssi10.tfm
 OUTPUT main.nav
 OUTPUT main.toc
 OUTPUT main.snm
