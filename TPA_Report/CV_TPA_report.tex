@@ -8,13 +8,22 @@
 \usepackage{amssymb}
 \usepackage{array}
 \usepackage{url}
+\usepackage{microtype}
 \usepackage[hidelinks]{hyperref}
 
 \hypersetup{
-  pdftitle={Few-Shot Image Classification with Foundation Models: A Comparative Study of ViT and DINOv3 Adaptation Strategies},
+  pdftitle={Fine-tuning the Foundational Model for Image Classification using Few Samples},
   pdfauthor={Gundapu Nitish Kumar and Mourya Nandan},
   pdfsubject={CS 6350 Computer Vision, TPA-17}
 }
+
+\setlength{\parskip}{0pt}
+\setlength{\parindent}{1em}
+\setlength{\partopsep}{0pt}
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.80}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.80}
 
 \graphicspath{{figures/}}
 
@@ -22,20 +31,26 @@
 
 \begin{document}
 
-\title{Few-Shot Image Classification with Foundation Models: A Comparative Study of ViT and DINOv3 Adaptation Strategies}
+\title{Fine-tuning the Foundational Model for Image Classification using Few Samples}
 
 \author{Gundapu~Nitish~Kumar and Mourya~Nandan%
-\thanks{The authors are with the Department of Data Science and Artificial Intelligence, Indian Institute of Technology Madras. This report was prepared for CS 6350: Computer Vision, TPA-17.}}
+\thanks{The authors are with the IIT Madras. This report was prepared for CS 6350: Computer Vision, TPA-17.}}
 
 \markboth{CS 6350 Term Project Assignment Report, TPA-17}%
-{Gundapu and Nandan: Few-Shot Classification with Foundation Models}
+{Gundapu and Nandan: Fine-Tuning Foundation Models with Few Samples}
 
 \IEEEspecialpapernotice{TPA-17}
 
 \maketitle
 
 \begin{abstract}
-Foundation models provide strong visual representations, but adapting them to a new domain with few labels remains a practical question. This report compares five adaptation strategies for two image-only foundation models: full fine-tuning, linear probing (LP), LoRA, BitFit, and a training-free nearest-class-mean (NCM) classifier. We use Google ViT-B/16, pretrained with supervision on ImageNet, and DINOv3 ViT-B/16, pretrained with self-supervised DINOv3 on LVD-1689M, on Flowers102 and Oxford-IIIT Pet. Flowers102's official training split contains ten images per class, while Pet uses its full 3{,}680-image training split; Pet's validation set is a deterministic 20\% of the official test split. Every run records top-1 and top-5 accuracy, macro precision, recall and F1, trainable parameters, wall-clock training time, and peak GPU memory. On Flowers102, DINOv3 NCM is best at 99.69\% with zero trainable parameters, and ViT full fine-tuning reaches 98.28\%. On Oxford-IIIT Pet, DINOv3 BitFit is best at 95.16\% with 0.12\% of the parameters, while ViT full fine-tuning reaches 93.18\%. NCM is within 0.41 points of the best Pet result and dominates the accuracy-per-parameter frontier on Flowers102. Full fine-tuning costs 141--488\,s and 5.0--7.4\,GB, versus 6--25\,s and 0.62--0.70\,GB for NCM. The results show that the frozen representation and a well-regularised head can matter more than the number of trainable parameters in the low-label regime; full fine-tuning is rarely the best accuracy-per-cost choice in this study.
+Foundation models provide strong visual representations, but adapting them to a new domain with few labels remains a practical question. This report compares five adaptation strategies for two image-only foundation models: full fine-tuning, linear probing (LP), LoRA, BitFit, and a training-free nearest-class-mean (NCM) classifier. We use Google ViT-B/16, pretrained with supervision on ImageNet, and DINOv3 ViT-B/16, pretrained with self-supervised DINOv3 on LVD-1689M, on Flowers102 and Oxford-IIIT Pet. Flowers102's official training split contains ten images per class, while Pet uses its full 3{,}680-image training split; Pet's validation set is a deterministic 20\% of the official test split. Every run is evaluated on top-1 and top-5 accuracy, macro precision, recall and F1, trainable parameters, wall-clock training time, and peak GPU memory, and is complemented by loss traces, confusion matrices, per-class F1 distributions, t-SNE projections, and Grad-CAM maps. The comparison targets accuracy-per-parameter and accuracy-per-cost trade-offs in the low-label regime.
+
+\medskip
+\noindent\textbf{GitHub Repository:} \url{https://github.com/NitishKumarGundapu/CV_TPA}
+
+\medskip
+\noindent AI-assisted boilerplate code generation and documentation were carried out with the DeepSeek-V4-Flash model (AITool).
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -51,34 +66,14 @@ The project brief, TPA-17, frames the problem as follows:
 ``To evaluate and compare fine-tuning strategies on foundation models (CLIP, DINOv2, ViT) for a downstream image classification task in a domain with limited labeled data. The project will explore fine-tuning and adapter-based methods (e.g., LoRA) for optimal performance and resource trade-offs.''
 \end{quote}
 
-We implement two reproducible pipelines with a common protocol: a Hugging Face ViT-B/16 pipeline and a \texttt{timm} DINOv3-B/16 pipeline. Both support full fine-tuning, linear probing, LoRA, BitFit, and NCM. We evaluate them on Flowers102~\cite{nilsback2008flowers} and Oxford-IIIT Pet~\cite{parkhi2012pets}, and report accuracy, precision, recall, F1, trainable parameters, training time, and GPU memory. Beyond aggregate scores, we examine loss and validation-accuracy traces, confusion matrices, per-class F1 distributions, Grad-CAM maps, and t-SNE projections.
+To answer this, we implement two reproducible pipelines with a common protocol: a Hugging Face ViT-B/16 pipeline and a \texttt{timm} DINOv3-B/16 pipeline. Both support full fine-tuning, linear probing, LoRA, BitFit, and NCM. We evaluate them on Flowers102~\cite{nilsback2008flowers} and Oxford-IIIT Pet~\cite{parkhi2012pets}, and report accuracy, precision, recall, F1, trainable parameters, training time, and GPU memory. Beyond aggregate scores, we examine loss and validation-accuracy traces, confusion matrices, per-class F1 distributions, Grad-CAM maps, and t-SNE projections.
 
-The main findings are as follows. First, on Flowers102 the representation is already saturated: every method reaches at least 92.5\% top-1 accuracy, and DINOv3 NCM reaches 99.69\%. Second, Oxford-IIIT Pet is harder and more model-sensitive: results lie between 92.0\% and 95.2\%, with DINOv3 BitFit best at 95.16\%. Third, frozen DINOv3 features are unusually strong: DINOv3 linear probing reaches 94.89\% on Pet, beating ViT full fine-tuning (93.18\%) while training 0.03\% of the parameters. Fourth, NCM is the most efficient method by a wide margin and is either best or within 0.41 points of the best result. Fifth, full fine-tuning uses 5.0--7.4\,GB and 141--488\,s for gains that are often smaller than those of much cheaper methods.
-
-The remainder of the report is organized as follows. Section~\ref{sec:related} reviews related work. Section~\ref{sec:problem} states the problem and scope. Section~\ref{sec:method} describes the datasets, models, adaptation strategies, training configuration, and evaluation protocol. Section~\ref{sec:results} presents the results and diagnostics. Section~\ref{sec:discussion} discusses observations, limitations, and future work. Section~\ref{sec:conclusion} concludes, and the appendices record per-run details and the artifact layout.
-
-\section{Related Work}
-\label{sec:related}
-
-\subsection{Vision Foundation Models}
-The Vision Transformer applies a Transformer encoder to a sequence of image patches and showed that large-scale pretraining can match or exceed convolutional networks~\cite{dosovitskiy2021}. DINOv2 learned general-purpose visual features with self-supervised distillation and demonstrated strong transfer without task-specific labels~\cite{oquab2024dinov2}. DINOv3 extends this line with larger-scale self-supervised training and improved global and dense features~\cite{simeoni2025dinov3}. CLIP took a different route, aligning images and text through contrastive pretraining and enabling text-prompt zero-shot classification~\cite{radford2021clip}. The present study uses ViT and DINOv3 because both are widely available as image-only backbones. Neither has a text encoder, so true text-prompt zero-shot classification is not available in this setup; NCM is used as the training-free alternative.
-
-\subsection{Efficient Adaptation}
-Full fine-tuning updates every backbone parameter, which is expensive and prone to overfitting when labels are scarce. Linear probing freezes the backbone and trains only a linear classifier; it is a strong baseline for high-quality frozen features. LoRA adds low-rank updates to selected weight matrices and leaves the pretrained weights unchanged~\cite{hu2022lora}. BitFit trains only the bias terms of the backbone and the classification head~\cite{zaken2022bitfit}. Adapter modules insert small trainable bottlenecks into transformer blocks~\cite{houlsby2019adapters}. These methods trade expressiveness for a much smaller parameter and memory footprint.
-
-\subsection{Training-Free Prototype Classifiers}
-Nearest-class-mean (NCM) classification assigns a test sample to the class whose mean feature is closest under a chosen metric~\cite{mensink2013ncm}. Prototypical networks apply the same idea to few-shot learning with learned embeddings~\cite{snell2017prototypical}. When the backbone is frozen, NCM requires no optimizer and no training epochs: it only needs one forward pass over the support set. This makes it a useful lower bound on what the pretrained representation already provides.
-
-\subsection{Diagnostics}
-Grad-CAM uses gradients flowing into a target layer to produce a coarse localization map for a predicted class~\cite{selvaraju2017gradcam}. t-SNE projects high-dimensional embeddings into two dimensions while preserving local neighborhoods~\cite{vandermaaten2008tsne}. Both are qualitative tools, but they help distinguish a representation problem from a classifier-head problem. We also report per-class F1 distributions to check whether an aggregate score hides a small number of catastrophic classes.
-
-\subsection{Datasets}
-Flowers102 contains 102 fine-grained flower species and is a standard few-shot and fine-grained classification benchmark~\cite{nilsback2008flowers}. Oxford-IIIT Pet contains 37 cat and dog breeds with large variation in pose and background~\cite{parkhi2012pets}. Both are small enough to make repeated adaptation experiments practical, and both expose different failure modes: Flowers102 is close to saturated for strong foundation models, while Pet remains visibly harder.
+Section~\ref{sec:problem} states the problem and scope. Section~\ref{sec:method} describes the datasets, models, adaptation strategies, training configuration, and evaluation protocol. Section~\ref{sec:results} presents the results and diagnostics. Section~\ref{sec:discussion} discusses observations, limitations, and future work. Section~\ref{sec:conclusion} concludes, and the appendices record per-run details and the artifact layout.
 
 \section{Problem Statement and Scope}
 \label{sec:problem}
 
-The TPA-17 problem statement asks us to evaluate and compare fine-tuning strategies on foundation models for a downstream image classification task in a domain with limited labeled data, and to explore fine-tuning and adapter-based methods for optimal performance and resource trade-offs.
+The brief therefore calls for a controlled comparison of fine-tuning and adapter-based strategies under limited labels, judged on both accuracy and resource cost.
 
 This study addresses three questions:
 \begin{enumerate}
@@ -103,7 +98,7 @@ A note on terminology is important. Flowers102's official training split contain
 \subsection{Pipeline Overview}
 Figure~\ref{fig:pipeline} summarizes the experimental pipeline. A dataset is converted into deterministic training, validation, and test splits. The chosen backbone is loaded with pretrained weights, the adaptation strategy determines which parameters are trainable, and the resulting model is evaluated on accuracy, precision, recall, F1, parameter count, time, and memory. Every run also writes predictions, per-class F1, a confusion matrix, a t-SNE projection, and Grad-CAM grids.
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.98\linewidth]{fig_pipeline_diagram.pdf}
 \caption{Five-stage training and evaluation pipeline. Both backbones share the data, training, and evaluation stages; the adaptation stage determines which parameters are trainable. NCM bypasses the optimizer and uses class prototypes instead.}
@@ -117,7 +112,7 @@ Table~\ref{tab:datasets} lists the dataset configuration, and Figs.~\ref{fig:flo
 
 \textbf{Oxford-IIIT Pet.} The dataset contains 7{,}349 images from 37 breeds (25 dogs and 12 cats): 3{,}680 training images and 3{,}669 test images. Because there is no official validation split, we hold out 20\% of each class's test images deterministically for validation (735 images) and use the remaining 2{,}934 images for testing. This keeps model selection independent of the training data while reducing the test set slightly. The task is also fine-grained, with large intra-class variation in pose, coat, and background and visible cat/dog confusion.
 
-\begin{table}[!t]
+\begin{table}[!htbp]
 \caption{Datasets and split configuration. Pet's validation set is carved from the official test split because no official validation split exists.}
 \label{tab:datasets}
 \centering
@@ -137,14 +132,14 @@ Input resolution & $224\times224$ (ViT), $256\times256$ (DINOv3) & $224\times224
 \end{tabular}
 \end{table}
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.90\linewidth]{fig_flowers_samples.png}
 \caption{Six of the 102 Flowers102 classes. The official training split contains only ten images per class, so the dataset is a few-shot benchmark by construction.}
 \label{fig:flowers}
 \end{figure}
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.90\linewidth]{fig_pet_samples.png}
 \caption{Six of the 37 Oxford-IIIT Pet breeds. Visually similar breeds and cat/dog confusion make Pet substantially harder than Flowers102 for frozen features.}
@@ -158,21 +153,7 @@ Input resolution & $224\times224$ (ViT), $256\times256$ (DINOv3) & $224\times224
 
 \textbf{DINOv3-B/16.} We use the \texttt{timm} checkpoint \texttt{vit\_base\_patch16\_dinov3.lvd1689m}. The backbone is a ViT-B/16 trained with self-supervised DINOv3 on LVD-1689M. It uses $256\times256$ input resolution, a CLS token plus four register tokens, and rotary position encoding. The CLS token is used as the global representation, and the model has 85.7M parameters. The checkpoint is loaded through the ungated \texttt{timm} mirror. The classifier is again a $C$-way linear head.
 
-Figures~\ref{fig:vit_arch} and~\ref{fig:dino_arch} show the two architectures. Both expose the same linear-head interface, so the adaptation code is identical apart from the LoRA target module names.
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.66\linewidth]{fig_arch_vit.png}
-\caption{ViT-B/16 architecture used in the ViT pipeline. The classifier is replaced by a $C$-way linear head; all other blocks are the pretrained ImageNet model.}
-\label{fig:vit_arch}
-\end{figure}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.92\linewidth]{fig_arch_dino.png}
-\caption{DINOv3-B/16 architecture. The backbone is a ViT-B/16 trained with self-supervised DINOv3; the CLS token plus register tokens feed a linear classification head.}
-\label{fig:dino_arch}
-\end{figure}
+Both models expose the same linear-head interface, so the adaptation code is identical apart from the LoRA target module names.
 
 \subsection{Adaptation Strategies}
 Let $f_\theta$ be the backbone and $h_\phi$ the linear classification head. Figure~\ref{fig:methods} summarizes the five strategies, and Table~\ref{tab:params} lists their parameter budgets.
@@ -181,11 +162,11 @@ Let $f_\theta$ be the backbone and $h_\phi$ the linear classification head. Figu
 
 \textbf{Linear probing (LP).} The backbone is frozen and only the head is trained. This updates 78{,}438 parameters on Flowers102 and 28{,}453 on Pet, which is 0.09\% and 0.03\% of the model, respectively.
 
-\textbf{LoRA.} Low-rank updates $\Delta W = BA$ are added to attention projections while the pretrained weights stay frozen. We use rank $r=16$, $\alpha=32$, and dropout 0.1. The target modules are \texttt{q\_proj} and \texttt{v\_proj} for the Hugging Face ViT, and \texttt{attn.qkv} and \texttt{attn.proj} for the \texttt{timm} DINOv3. The head is also trained. This updates 668k/618k parameters for ViT and 963k/913k for DINOv3 on Flowers/Pet, or 0.7--1.1\% of the model.
+\textbf{LoRA.} Low-rank updates $\Delta W = BA$ are added to attention projections while the pretrained weights stay frozen~\cite{hu2022lora}. We use rank $r=16$, $\alpha=32$, and dropout 0.1. The target modules are \texttt{q\_proj} and \texttt{v\_proj} for the Hugging Face ViT, and \texttt{attn.qkv} and \texttt{attn.proj} for the \texttt{timm} DINOv3. The head is also trained. This updates 668k/618k parameters for ViT and 963k/913k for DINOv3 on Flowers/Pet, or 0.7--1.1\% of the model.
 
-\textbf{BitFit.} All weight matrices are frozen; every bias term in the backbone and the full classification head are trained. This updates 181k/131k parameters for ViT and 154k/104k for DINOv3, or 0.12--0.21\% of the model.
+\textbf{BitFit.} All weight matrices are frozen; every bias term in the backbone and the full classification head are trained~\cite{zaken2022bitfit}. This updates 181k/131k parameters for ViT and 154k/104k for DINOv3, or 0.12--0.21\% of the model.
 
-\textbf{Nearest-class-mean (NCM).} No parameters are trained. For each class $c$, the prototype is
+\textbf{Nearest-class-mean (NCM)~\cite{mensink2013ncm}.} No parameters are trained. For each class $c$, the prototype is
 \begin{equation}
 \mu_c = \frac{1}{|\mathcal{S}_c|}\sum_{i\in\mathcal{S}_c}
 \frac{f_\theta(x_i)}{\lVert f_\theta(x_i)\rVert_2},
@@ -196,14 +177,14 @@ and a test image is assigned to
 \end{equation}
 The similarity scale used for the softmax-style logits is 20.0. NCM needs one forward pass over the training set, no gradients, and no optimizer.
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.94\linewidth]{fig_methods.png}
 \caption{Which parameters move under each adaptation strategy. Blue denotes trainable parameters, grey frozen parameters, orange LoRA adapters, green bias terms, and yellow training-free prototypes. NCM does not use the linear head for classification.}
 \label{fig:methods}
 \end{figure}
 
-\begin{table}[!t]
+\begin{table}[!htbp]
 \caption{Trainable parameter budget. Percentages are relative to the full backbone-plus-head model for the corresponding dataset.}
 \label{tab:params}
 \centering
@@ -234,7 +215,7 @@ Table~\ref{tab:config} lists the shared training configuration. The four trained
 
 All runs use seed 42, AdamW, a learning rate of $10^{-4}$, weight decay 0.05, cosine annealing over 10 epochs, batch size 32, and FP32 precision. Model selection uses the checkpoint with the lowest validation loss. Early stopping has patience 10; since training runs for 10 epochs, it does not trigger. The best checkpoint epoch for each run is recorded in Appendix~\ref{app:per_run}. The hardware is an NVIDIA RTX PRO 4000 Blackwell GPU with 24\,GB of memory. The software stack uses PyTorch, PyTorch Lightning, Hugging Face Transformers, \texttt{timm}, PEFT, and scikit-learn.
 
-\begin{table}[!t]
+\begin{table}[!htbp]
 \caption{Training configuration shared by the four trained methods. NCM has no optimizer and no epochs.}
 \label{tab:config}
 \centering
@@ -263,7 +244,7 @@ Hardware & NVIDIA RTX PRO 4000 Blackwell, 24\,GB \\
 \subsection{Evaluation Protocol}
 For every run we report top-1 accuracy, top-5 accuracy, macro-averaged precision, recall and F1, weighted F1, the number of trainable parameters, the trainable fraction, wall-clock training time, and peak GPU memory. All accuracy, precision, recall, and F1 values in this report are percentages. Metrics are computed on the held-out test split after model selection on the validation split. We also store per-class precision, recall and F1, the confusion matrix, validation CLS embeddings, and Grad-CAM visualizations.
 
-For t-SNE we project 600 validation CLS embeddings per panel with perplexity 30 and seed 42. For Grad-CAM we use the last ViT transformer block. For DINOv3 we use the penultimate block: the classifier reads only the CLS token, so patch-token gradients at the final block output are exactly zero, while the penultimate block still carries a gradient from the class score to the patch tokens. NCM has no gradients and therefore no Grad-CAM.
+For t-SNE~\cite{vandermaaten2008tsne} we project 600 validation CLS embeddings per panel with perplexity 30 and seed 42. For Grad-CAM~\cite{selvaraju2017gradcam} we use the last ViT transformer block. For DINOv3 we use the penultimate block: the classifier reads only the CLS token, so patch-token gradients at the final block output are exactly zero, while the penultimate block still carries a gradient from the class score to the patch tokens. NCM has no gradients and therefore no Grad-CAM.
 
 \subsection{Reproducibility}
 All experiments are driven by the command-line interfaces in \texttt{src/vit} and \texttt{src/dino\_v3}. The two full sweeps are reproduced with
@@ -281,7 +262,7 @@ Tables~\ref{tab:vit_results} and~\ref{tab:dino_results} report the complete resu
 
 On Flowers102, every method is at least 92.5\%. ViT full fine-tuning reaches 98.28\%, ViT NCM 98.59\%, and DINOv3 NCM 99.69\%, the best result in the study. DINOv3 full fine-tuning reaches 98.88\%. The weakest Flowers102 result is ViT linear probing at 92.54\%. On Pet, results range from 92.02\% (ViT LP) to 95.16\% (DINOv3 BitFit). DINOv3 full fine-tuning reaches 95.02\% and DINOv3 LP 94.89\%, while ViT full fine-tuning reaches 93.18\%. Top-5 accuracy is between 98.24\% and 99.93\% for every run, so the remaining errors are mostly top-1 confusions rather than failures to retrieve the correct family.
 
-\begin{table}[!t]
+\begin{table}[!htbp]
 \caption{ViT-B/16 results on the held-out test splits. Bold marks the best value in that column for the dataset within this backbone. Params, time, and GPU memory are not ranked.}
 \label{tab:vit_results}
 \centering
@@ -307,7 +288,7 @@ NCM & Pet & 92.23 & 99.69 & 92.64 & 92.20 & 92.21 & 0 & 0.00 & 20.6 & 618 \\
 \end{tabular}}
 \end{table}
 
-\begin{table}[!t]
+\begin{table}[!htbp]
 \caption{DINOv3-B/16 results on the held-out test splits. Bold marks the best value in that column for the dataset within this backbone. Params, time, and GPU memory are not ranked.}
 \label{tab:dino_results}
 \centering
@@ -333,7 +314,7 @@ NCM & Pet & 94.75 & 99.90 & 95.02 & 94.66 & 94.60 & 0 & 0.00 & 25.3 & 701 \\
 \end{tabular}}
 \end{table}
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.94\linewidth]{fig_accuracy_bars.png}
 \caption{Top-1 test accuracy for the five adaptation strategies. Left: Flowers102. Right: Oxford-IIIT Pet. The vertical axis is truncated to make the differences visible.}
@@ -351,28 +332,28 @@ Figures~\ref{fig:loss_vit_flowers}--\ref{fig:loss_dino_pet} show training loss, 
 
 \textbf{DINOv3 on Pet (Fig.~\ref{fig:loss_dino_pet}).} BitFit is the best test result (95.16\%) at 0.12\% of the parameters, and Full reaches 95.02\%. Full selects its best checkpoint at epoch 4 and then overfits, with validation loss rising afterwards. LP, LoRA, and BitFit continue to improve. All five methods lie within 0.9 points (94.24--95.16\%), which suggests that the frozen DINOv3 representation is already close to the best adapted representation.
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.94\linewidth]{fig_loss_vit_flowers102.png}
 \caption{ViT-B/16 on Flowers102. Each panel shows training loss and validation loss on a logarithmic left axis and validation accuracy on the right axis.}
 \label{fig:loss_vit_flowers}
 \end{figure}
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.94\linewidth]{fig_loss_vit_oxfordiiitpet.png}
 \caption{ViT-B/16 on Oxford-IIIT Pet. Full fine-tuning selects epoch 7; the other trained runs select epoch 9.}
 \label{fig:loss_vit_pet}
 \end{figure}
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.94\linewidth]{fig_loss_dino_v3_flowers102.png}
 \caption{DINOv3-B/16 on Flowers102. NCM is omitted because it has no optimization trace; it reaches 99.69\% test accuracy.}
 \label{fig:loss_dino_flowers}
 \end{figure}
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.94\linewidth]{fig_loss_dino_v3_oxfordiiitpet.png}
 \caption{DINOv3-B/16 on Oxford-IIIT Pet. Full fine-tuning selects epoch 4 and then overfits; BitFit is the best test result at 95.16\%.}
@@ -382,7 +363,7 @@ Figures~\ref{fig:loss_vit_flowers}--\ref{fig:loss_dino_pet} show training loss, 
 \subsection{Parameter and Compute Efficiency}
 Figure~\ref{fig:efficiency} plots accuracy against trainable parameters and training time. Full fine-tuning costs 141--488\,s and 5.0--7.4\,GB. LP costs 75--214\,s and 0.63--0.71\,GB. NCM costs 6--25\,s and 0.62--0.70\,GB. On Pet, DINOv3 BitFit is on the Pareto frontier: 95.16\% at 103{,}717 parameters (0.12\%), 383\,s, and 4.2\,GB. On Flowers102, DINOv3 NCM dominates: 99.69\% at zero parameters, 7.5\,s, and 0.70\,GB. Full fine-tuning is on the frontier only for ViT/Pet, where it is the best accuracy; elsewhere it is dominated by cheaper methods.
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.96\linewidth]{fig_efficiency.png}
 \caption{Accuracy versus trainable parameters (left column) and training time (right column) for Flowers102 (top) and Oxford-IIIT Pet (bottom). NCM is placed at one trainable parameter on the logarithmic axis for visibility.}
@@ -395,7 +376,7 @@ Tables~\ref{tab:vit_results} and~\ref{tab:dino_results} also report macro precis
 \subsection{Confusion Matrices}
 Figure~\ref{fig:confusion} shows row-normalized test confusion matrices for four representative configurations. On Flowers102, the diagonal is almost clean, and the remaining errors are concentrated between visually similar species. DINOv3 NCM has the cleanest diagonal (99.69\%). On Pet, visible off-diagonal mass appears from cat/dog and breed confusions. DINOv3 BitFit is best (95.16\%), and ViT full fine-tuning reaches 93.18\%. Because the matrices are row-normalized, the diagonal is per-class recall, so the colour scale is directly comparable across panels even though the number of classes differs.
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.94\linewidth]{fig_confusion.png}
 \caption{Row-normalized test confusion matrices. Top row: Flowers102 with NCM. Bottom row: Oxford-IIIT Pet with the best configuration for each backbone.}
@@ -405,14 +386,14 @@ Figure~\ref{fig:confusion} shows row-normalized test confusion matrices for four
 \subsection{Representation Diagnostics: t-SNE}
 Figures~\ref{fig:tsne_vit} and~\ref{fig:tsne_dino} compare t-SNE projections of validation CLS embeddings. On Flowers102, both models form tight, well-separated clusters even for LP and NCM, which is consistent with the saturated accuracy. On Pet, the clusters overlap more, especially between breeds. Full fine-tuning and LoRA sharpen some boundaries, but the frozen DINOv3 features already form compact groups under NCM and LP. This is the representation-level explanation for why the training-free baseline is competitive: the frozen features are already close to linearly separable, and the linear head or prototype rule only has to place boundaries between well-separated clusters.
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.96\linewidth]{fig_tsne_vit.png}
 \caption{t-SNE projections of ViT-B/16 validation CLS embeddings. Rows are datasets and columns are adaptation methods. Each panel uses 600 samples, perplexity 30, and seed 42.}
 \label{fig:tsne_vit}
 \end{figure}
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.96\linewidth]{fig_tsne_dino_v3.png}
 \caption{t-SNE projections of DINOv3-B/16 validation CLS embeddings. The frozen NCM and LP features already form compact clusters, especially on Flowers102.}
@@ -422,7 +403,7 @@ Figures~\ref{fig:tsne_vit} and~\ref{fig:tsne_dino} compare t-SNE projections of 
 \subsection{Attention Diagnostics: Grad-CAM}
 Figure~\ref{fig:gradcam} shows Grad-CAM maps for full fine-tuning and linear probing on both datasets. ViT maps are localized on petals, faces, and object parts. DINOv3 maps are broader and more object-centric. On the ViT examples, linear probing spreads attention more than full fine-tuning, while DINOv3 maps remain broad in both settings. These are qualitative examples from correctly classified validation images; they are intended to show where the model looks, not to provide a quantitative localization score. As noted in Section~\ref{sec:method}, DINOv3 uses the penultimate block because the final block's patch-token gradients vanish when the classifier reads only the CLS token. NCM has no gradients and therefore no Grad-CAM.
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.96\linewidth]{fig_gradcam.png}
 \caption{Grad-CAM on held-out validation images. Rows are backbones and columns are dataset/method pairs. ViT maps come from the final block; DINOv3 maps come from the penultimate block.}
@@ -432,7 +413,7 @@ Figure~\ref{fig:gradcam} shows Grad-CAM maps for full fine-tuning and linear pro
 \subsection{Per-Class Consistency}
 Figure~\ref{fig:per_class} shows the distribution of per-class F1 over all classes. On Flowers102, full fine-tuning, LoRA, BitFit, and NCM have high medians and compact lower tails, while ViT linear probing has a long lower tail and the lowest median. On Pet, all methods have lower medians and wider tails, and the frozen DINOv3 methods remain comparatively tight. The figure confirms that the best aggregate scores are not hiding a small number of catastrophic classes, while also showing why linear probing on ViT/Flowers102 is the weakest configuration.
 
-\begin{figure}[!t]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.96\linewidth]{fig_per_class_f1.png}
 \caption{Per-class F1 distributions. Each pair of boxes compares ViT-B/16 and DINOv3-B/16 for the same method. Whiskers extend to the non-outlier range; outliers are omitted for readability.}
@@ -540,7 +521,7 @@ Each run directory contains \texttt{metrics.json}, \texttt{predictions.npz}, \te
 \section*{Acknowledgements}
 The authors thank the course staff of CS 6350 (TPA-17) and the providers of the Flowers102 and Oxford-IIIT Pet datasets. Pretrained ViT and DINOv3 checkpoints were obtained from Google/Hugging Face and Meta/\texttt{timm}, respectively. Experiments were run on an NVIDIA RTX PRO 4000 Blackwell GPU. The implementation uses PyTorch, PyTorch Lightning, Hugging Face Transformers, PEFT, \texttt{timm}, and scikit-learn.
 
-\begin{thebibliography}{13}
+\begin{thebibliography}{11}
 
 \bibitem{dosovitskiy2021}
 A.~Dosovitskiy, L.~Beyer, A.~Kolesnikov, D.~Weissenborn, X.~Zhai, T.~Unterthiner, M.~Dehghani, M.~Minderer, G.~Heigold, S.~Gelly, J.~Uszkoreit, and N.~Houlsby, ``An image is worth 16$\times$16 words: Transformers for image recognition at scale,'' in \emph{Proc. Int. Conf. Learning Representations (ICLR)}, 2021.
@@ -554,32 +535,26 @@ O.~Sim\'eoni, H.~V.~Vo, M.~Oquab, et al., ``DINOv3,'' \emph{arXiv preprint}, 202
 \bibitem{radford2021clip}
 A.~Radford, J.~W.~Kim, C.~Hallacy, A.~Ramesh, G.~Goh, S.~Agarwal, G.~Sastry, A.~Askell, P.~Mishkin, J.~Clark, G.~Krueger, and I.~Sutskever, ``Learning transferable visual models from natural language supervision,'' in \emph{Proc. Int. Conf. Machine Learning (ICML)}, 2021.
 
+\bibitem{nilsback2008flowers}
+M.-E.~Nilsback and A.~Zisserman, ``Automated flower classification over a large number of classes,'' in \emph{Proc. Indian Conf. Computer Vision, Graphics and Image Processing (ICVGIP)}, 2008.
+
+\bibitem{parkhi2012pets}
+O.~M.~Parkhi, A.~Vedaldi, A.~Zisserman, and C.~V.~Jawahar, ``Cats and dogs,'' in \emph{Proc. IEEE Conf. Computer Vision and Pattern Recognition (CVPR)}, 2012.
+
 \bibitem{hu2022lora}
 E.~J.~Hu, Y.~Shen, P.~Wallis, Z.~Allen-Zhu, Y.~Li, S.~Wang, L.~Wang, and W.~Chen, ``LoRA: Low-rank adaptation of large language models,'' in \emph{Proc. Int. Conf. Learning Representations (ICLR)}, 2022.
 
 \bibitem{zaken2022bitfit}
 E.~Ben~Zaken, Y.~Goldberg, and S.~Ravfogel, ``BitFit: Simple parameter-efficient fine-tuning for transformer-based masked language-models,'' in \emph{Proc. Annual Meeting of the Association for Computational Linguistics (ACL)}, 2022.
 
-\bibitem{houlsby2019adapters}
-N.~Houlsby, A.~Giurgiu, S.~Jastrzebski, B.~Morrone, Q.~de~Laroussilhe, A.~Gesmundo, M.~Attariyan, and S.~Gelly, ``Parameter-efficient transfer learning for NLP,'' in \emph{Proc. Int. Conf. Machine Learning (ICML)}, 2019.
-
-\bibitem{snell2017prototypical}
-J.~Snell, K.~Swersky, and R.~Zemel, ``Prototypical networks for few-shot learning,'' in \emph{Advances in Neural Information Processing Systems (NeurIPS)}, 2017.
-
 \bibitem{mensink2013ncm}
-T.~Mensink, J.~Verbeek, F.~Perronnin, and G.~Csurka, ``Distance-based image classification: Generalizing to new classes at near-zero cost,'' \emph{IEEE Trans. Pattern Analysis and Machine Intelligence}, vol.~35, no.~11, pp.~2624--2637, 2013.
-
-\bibitem{selvaraju2017gradcam}
-R.~R.~Selvaraju, M.~Cogswell, A.~Das, R.~Vedantam, D.~Parikh, and D.~Batra, ``Grad-CAM: Visual explanations from deep networks via gradient-based localization,'' in \emph{Proc. IEEE Int. Conf. Computer Vision (ICCV)}, 2017.
+T.~Mensink, J.~Verbeek, F.~Perronnin, and C.~Csurka, ``Distance-based image classification: Generalizing to new classes at near-zero cost,'' \emph{IEEE Trans. Pattern Analysis and Machine Intelligence}, vol.~35, no.~11, pp.~2624--2637, 2013.
 
 \bibitem{vandermaaten2008tsne}
 L.~van~der~Maaten and G.~Hinton, ``Visualizing data using t-SNE,'' \emph{Journal of Machine Learning Research}, vol.~9, pp.~2579--2605, 2008.
 
-\bibitem{nilsback2008flowers}
-M.-E.~Nilsback and A.~Zisserman, ``Automated flower classification over a large number of classes,'' in \emph{Proc. Indian Conf. Computer Vision, Graphics and Image Processing (ICVGIP)}, 2008.
-
-\bibitem{parkhi2012pets}
-O.~M.~Parkhi, A.~Vedaldi, A.~Zisserman, and C.~V.~Jawahar, ``Cats and dogs,'' in \emph{Proc. IEEE Conf. Computer Vision and Pattern Recognition (CVPR)}, 2012.
+\bibitem{selvaraju2017gradcam}
+R.~R.~Selvaraju, M.~Cogswell, A.~Das, R.~Vedantam, D.~Parikh, and D.~Batra, ``Grad-CAM: Visual explanations from deep networks via gradient-based localization,'' in \emph{Proc. IEEE Int. Conf. Computer Vision (ICCV)}, 2017.
 
 \end{thebibliography}
 

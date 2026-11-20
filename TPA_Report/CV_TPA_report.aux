@@ -1,0 +1,104 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{dosovitskiy2021}
+\citation{oquab2024dinov2}
+\citation{simeoni2025dinov3}
+\citation{radford2021clip}
+\citation{nilsback2008flowers}
+\citation{parkhi2012pets}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {II}Problem Statement and Scope}{1}{section.2}\protected@file@percent }
+\newlabel{sec:problem}{{II}{1}{Problem Statement and Scope}{section.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {III}Methodology}{2}{section.3}\protected@file@percent }
+\newlabel{sec:method}{{III}{2}{Methodology}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Pipeline Overview}{2}{subsection.3.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Five-stage training and evaluation pipeline. Both backbones share the data, training, and evaluation stages; the adaptation stage determines which parameters are trainable. NCM bypasses the optimizer and uses class prototypes instead.}}{2}{figure.1}\protected@file@percent }
+\newlabel{fig:pipeline}{{1}{2}{Five-stage training and evaluation pipeline. Both backbones share the data, training, and evaluation stages; the adaptation stage determines which parameters are trainable. NCM bypasses the optimizer and uses class prototypes instead}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Datasets and Splits}{2}{subsection.3.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Datasets and split configuration. Pet's validation set is carved from the official test split because no official validation split exists.}}{3}{table.1}\protected@file@percent }
+\newlabel{tab:datasets}{{I}{3}{Datasets and split configuration. Pet's validation set is carved from the official test split because no official validation split exists}{table.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Six of the 102 Flowers102 classes. The official training split contains only ten images per class, so the dataset is a few-shot benchmark by construction.}}{3}{figure.2}\protected@file@percent }
+\newlabel{fig:flowers}{{2}{3}{Six of the 102 Flowers102 classes. The official training split contains only ten images per class, so the dataset is a few-shot benchmark by construction}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Models}{3}{subsection.3.3}\protected@file@percent }
+\citation{hu2022lora}
+\citation{zaken2022bitfit}
+\citation{mensink2013ncm}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Six of the 37 Oxford-IIIT Pet breeds. Visually similar breeds and cat/dog confusion make Pet substantially harder than Flowers102 for frozen features.}}{4}{figure.3}\protected@file@percent }
+\newlabel{fig:pet}{{3}{4}{Six of the 37 Oxford-IIIT Pet breeds. Visually similar breeds and cat/dog confusion make Pet substantially harder than Flowers102 for frozen features}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}Adaptation Strategies}{4}{subsection.3.4}\protected@file@percent }
+\citation{vandermaaten2008tsne}
+\citation{selvaraju2017gradcam}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Which parameters move under each adaptation strategy. Blue denotes trainable parameters, grey frozen parameters, orange LoRA adapters, green bias terms, and yellow training-free prototypes. NCM does not use the linear head for classification.}}{5}{figure.4}\protected@file@percent }
+\newlabel{fig:methods}{{4}{5}{Which parameters move under each adaptation strategy. Blue denotes trainable parameters, grey frozen parameters, orange LoRA adapters, green bias terms, and yellow training-free prototypes. NCM does not use the linear head for classification}{figure.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Trainable parameter budget. Percentages are relative to the full backbone-plus-head model for the corresponding dataset.}}{5}{table.2}\protected@file@percent }
+\newlabel{tab:params}{{II}{5}{Trainable parameter budget. Percentages are relative to the full backbone-plus-head model for the corresponding dataset}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-E}}Training Configuration}{5}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-F}}Evaluation Protocol}{5}{subsection.3.6}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Training configuration shared by the four trained methods. NCM has no optimizer and no epochs.}}{6}{table.3}\protected@file@percent }
+\newlabel{tab:config}{{III}{6}{Training configuration shared by the four trained methods. NCM has no optimizer and no epochs}{table.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-G}}Reproducibility}{6}{subsection.3.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Results}{6}{section.4}\protected@file@percent }
+\newlabel{sec:results}{{IV}{6}{Results}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Overall Comparison}{6}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Optimization Traces}{6}{subsection.4.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces ViT-B/16 results on the held-out test splits. Bold marks the best value in that column for the dataset within this backbone. Params, time, and GPU memory are not ranked.}}{7}{table.4}\protected@file@percent }
+\newlabel{tab:vit_results}{{IV}{7}{ViT-B/16 results on the held-out test splits. Bold marks the best value in that column for the dataset within this backbone. Params, time, and GPU memory are not ranked}{table.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {V}{\ignorespaces DINOv3-B/16 results on the held-out test splits. Bold marks the best value in that column for the dataset within this backbone. Params, time, and GPU memory are not ranked.}}{7}{table.5}\protected@file@percent }
+\newlabel{tab:dino_results}{{V}{7}{DINOv3-B/16 results on the held-out test splits. Bold marks the best value in that column for the dataset within this backbone. Params, time, and GPU memory are not ranked}{table.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Parameter and Compute Efficiency}{7}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Precision, Recall, and F1}{7}{subsection.4.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Top-1 test accuracy for the five adaptation strategies. Left: Flowers102. Right: Oxford-IIIT Pet. The vertical axis is truncated to make the differences visible.}}{8}{figure.5}\protected@file@percent }
+\newlabel{fig:acc_bars}{{5}{8}{Top-1 test accuracy for the five adaptation strategies. Left: Flowers102. Right: Oxford-IIIT Pet. The vertical axis is truncated to make the differences visible}{figure.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces ViT-B/16 on Flowers102. Each panel shows training loss and validation loss on a logarithmic left axis and validation accuracy on the right axis.}}{8}{figure.6}\protected@file@percent }
+\newlabel{fig:loss_vit_flowers}{{6}{8}{ViT-B/16 on Flowers102. Each panel shows training loss and validation loss on a logarithmic left axis and validation accuracy on the right axis}{figure.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Confusion Matrices}{8}{subsection.4.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces ViT-B/16 on Oxford-IIIT Pet. Full fine-tuning selects epoch 7; the other trained runs select epoch 9.}}{9}{figure.7}\protected@file@percent }
+\newlabel{fig:loss_vit_pet}{{7}{9}{ViT-B/16 on Oxford-IIIT Pet. Full fine-tuning selects epoch 7; the other trained runs select epoch 9}{figure.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces DINOv3-B/16 on Flowers102. NCM is omitted because it has no optimization trace; it reaches 99.69\% test accuracy.}}{9}{figure.8}\protected@file@percent }
+\newlabel{fig:loss_dino_flowers}{{8}{9}{DINOv3-B/16 on Flowers102. NCM is omitted because it has no optimization trace; it reaches 99.69\% test accuracy}{figure.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-F}}Representation Diagnostics: t-SNE}{9}{subsection.4.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces DINOv3-B/16 on Oxford-IIIT Pet. Full fine-tuning selects epoch 4 and then overfits; BitFit is the best test result at 95.16\%.}}{10}{figure.9}\protected@file@percent }
+\newlabel{fig:loss_dino_pet}{{9}{10}{DINOv3-B/16 on Oxford-IIIT Pet. Full fine-tuning selects epoch 4 and then overfits; BitFit is the best test result at 95.16\%}{figure.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Accuracy versus trainable parameters (left column) and training time (right column) for Flowers102 (top) and Oxford-IIIT Pet (bottom). NCM is placed at one trainable parameter on the logarithmic axis for visibility.}}{10}{figure.10}\protected@file@percent }
+\newlabel{fig:efficiency}{{10}{10}{Accuracy versus trainable parameters (left column) and training time (right column) for Flowers102 (top) and Oxford-IIIT Pet (bottom). NCM is placed at one trainable parameter on the logarithmic axis for visibility}{figure.10}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Row-normalized test confusion matrices. Top row: Flowers102 with NCM. Bottom row: Oxford-IIIT Pet with the best configuration for each backbone.}}{11}{figure.11}\protected@file@percent }
+\newlabel{fig:confusion}{{11}{11}{Row-normalized test confusion matrices. Top row: Flowers102 with NCM. Bottom row: Oxford-IIIT Pet with the best configuration for each backbone}{figure.11}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces t-SNE projections of ViT-B/16 validation CLS embeddings. Rows are datasets and columns are adaptation methods. Each panel uses 600 samples, perplexity 30, and seed 42.}}{11}{figure.12}\protected@file@percent }
+\newlabel{fig:tsne_vit}{{12}{11}{t-SNE projections of ViT-B/16 validation CLS embeddings. Rows are datasets and columns are adaptation methods. Each panel uses 600 samples, perplexity 30, and seed 42}{figure.12}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces t-SNE projections of DINOv3-B/16 validation CLS embeddings. The frozen NCM and LP features already form compact clusters, especially on Flowers102.}}{12}{figure.13}\protected@file@percent }
+\newlabel{fig:tsne_dino}{{13}{12}{t-SNE projections of DINOv3-B/16 validation CLS embeddings. The frozen NCM and LP features already form compact clusters, especially on Flowers102}{figure.13}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-G}}Attention Diagnostics: Grad-CAM}{12}{subsection.4.7}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Grad-CAM on held-out validation images. Rows are backbones and columns are dataset/method pairs. ViT maps come from the final block; DINOv3 maps come from the penultimate block.}}{12}{figure.14}\protected@file@percent }
+\newlabel{fig:gradcam}{{14}{12}{Grad-CAM on held-out validation images. Rows are backbones and columns are dataset/method pairs. ViT maps come from the final block; DINOv3 maps come from the penultimate block}{figure.14}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-H}}Per-Class Consistency}{13}{subsection.4.8}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Per-class F1 distributions. Each pair of boxes compares ViT-B/16 and DINOv3-B/16 for the same method. Whiskers extend to the non-outlier range; outliers are omitted for readability.}}{13}{figure.15}\protected@file@percent }
+\newlabel{fig:per_class}{{15}{13}{Per-class F1 distributions. Each pair of boxes compares ViT-B/16 and DINOv3-B/16 for the same method. Whiskers extend to the non-outlier range; outliers are omitted for readability}{figure.15}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Discussion}{13}{section.5}\protected@file@percent }
+\newlabel{sec:discussion}{{V}{13}{Discussion}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Main Observations}{13}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Unexpected Observations}{13}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Limitations}{14}{subsection.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}Future Work}{14}{subsection.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion}{14}{section.6}\protected@file@percent }
+\newlabel{sec:conclusion}{{VI}{14}{Conclusion}{section.6}{}}
+\@writefile{toc}{\contentsline {section}{Appendix~A: Per-Run Details}{15}{section*.1}\protected@file@percent }
+\newlabel{app:per_run}{{A}{15}{\appendixname ~\thesectiondis \\* Per-Run Details}{section*.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {VI}{\ignorespaces Per-run details. The best epoch and validation loss are parsed from the selected checkpoint. NCM has no checkpoint.}}{15}{table.6}\protected@file@percent }
+\newlabel{tab:per_run}{{VI}{15}{Per-run details. The best epoch and validation loss are parsed from the selected checkpoint. NCM has no checkpoint}{table.6}{}}
+\bibcite{dosovitskiy2021}{1}
+\bibcite{oquab2024dinov2}{2}
+\bibcite{simeoni2025dinov3}{3}
+\bibcite{radford2021clip}{4}
+\bibcite{nilsback2008flowers}{5}
+\bibcite{parkhi2012pets}{6}
+\bibcite{hu2022lora}{7}
+\bibcite{zaken2022bitfit}{8}
+\bibcite{mensink2013ncm}{9}
+\bibcite{vandermaaten2008tsne}{10}
+\bibcite{selvaraju2017gradcam}{11}
+\@writefile{toc}{\contentsline {section}{Appendix~B: Artifact Layout and Commands}{16}{section*.2}\protected@file@percent }
+\newlabel{app:artifacts}{{B}{16}{\appendixname ~\thesectiondis \\* Artifact Layout and Commands}{section*.2}{}}
+\@writefile{toc}{\contentsline {section}{References}{16}{section*.4}\protected@file@percent }
+\gdef \@abspage@last{16}
