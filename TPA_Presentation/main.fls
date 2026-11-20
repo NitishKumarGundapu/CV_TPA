@@ -503,6 +503,14 @@ INPUT ./figures/efficiency.png
 INPUT ./figures/efficiency.png
 INPUT ./figures/efficiency.png
 INPUT ./figures/efficiency.png
+INPUT ./figures/test_strip_flowers102.png
+INPUT ./figures/test_strip_flowers102.png
+INPUT ./figures/test_strip_flowers102.png
+INPUT ./figures/test_strip_flowers102.png
+INPUT ./figures/test_strip_oxfordiiitpet.png
+INPUT ./figures/test_strip_oxfordiiitpet.png
+INPUT ./figures/test_strip_oxfordiiitpet.png
+INPUT ./figures/test_strip_oxfordiiitpet.png
 INPUT /home/nitish/.TinyTeX/texmf-dist/fonts/tfm/public/cm/cmss17.tfm
 INPUT /home/nitish/.TinyTeX/texmf-dist/fonts/tfm/public/cm/cmssbx10.tfm
 INPUT /home/nitish/.TinyTeX/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm

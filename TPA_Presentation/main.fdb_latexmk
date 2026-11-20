@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1795139892.07493 "main.tex" "main.pdf" "main" 1795139893.61503 0
+["pdflatex"] 1795155658.45115 "main.tex" "main.pdf" "main" 1795155659.98831 0
   "/home/nitish/.TinyTeX/texmf-dist/fonts/tfm/jknappen/ec/tcss0800.tfm" 1136768653 1536 16418351df4369b7cef8f784ccb87a85 ""
   "/home/nitish/.TinyTeX/texmf-dist/fonts/tfm/jknappen/ec/tcss0900.tfm" 1136768653 1536 ba0169ee8bc017972775b933313cbbb0 ""
   "/home/nitish/.TinyTeX/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
@@ -221,13 +221,15 @@
   "figures/loss_vit_flowers102.png" 1795118043.15541 183916 e45a780b4527ad4bf41d9344585fd0bd ""
   "figures/loss_vit_oxfordiiitpet.png" 1795118043.48244 185880 1280cec7686c9a81906f2fcf3364498d ""
   "figures/pet_samples.png" 1795118042.84739 1170475 0f1983700486554637654cf02e8a9c7f ""
+  "figures/test_strip_flowers102.png" 1795154757.58091 551379 cf729ea594d6688881089aaf99825fda ""
+  "figures/test_strip_oxfordiiitpet.png" 1795154757.62892 239503 3209306b6f82df87a6d321cac7768139 ""
   "figures/tsne_dino_v3.png" 1795118060.45166 364160 1248caa01c63f8aa1ce8ed4f9581a203 ""
   "figures/tsne_vit.png" 1795118049.56588 320750 b7a38c88bc04cbeadc136392e30d87e6 ""
   "figures/vit_arch.png" 1795118042.10334 165607 1d60984ce4a46d74e1d13946a12b37d8 ""
-  "main.aux" 1795139893.56597 3528 fdfa7ce1363a7a37a794a21fdc24c44a "pdflatex"
-  "main.nav" 1795139893.56637 2411 8c6bbe43bf923ac88764b8cf06f7ccff "pdflatex"
-  "main.out" 1795139892.30028 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "main.tex" 1795139868.56935 29105 12e616bf5353ca3432be4f401a933b9a ""
+  "main.aux" 1795155659.95118 3786 27b42bfa0e767eaa46e89b97e7f759c4 "pdflatex"
+  "main.nav" 1795155659.95161 2597 8d929ff01d0e977ef9f19206c5472659 "pdflatex"
+  "main.out" 1795155658.67103 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "main.tex" 1795155655.2708 31457 f31e8136f7f14ba51173a08684d7e3e1 ""
   (generated)
   "main.aux"
   "main.log"

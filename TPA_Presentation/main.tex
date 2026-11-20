@@ -243,49 +243,59 @@
   \begin{description}
     \item[Full fine-tuning] Update the backbone $\theta$ and the head $\phi$. Most expressive, most expensive; 85.9M (ViT) or 85.7M (DINOv3) trainable parameters.
     \item[Linear probing (LP)] Freeze $\theta$, train only the head $\phi$. Trainable: 78{,}438 parameters on Flowers102 and 28{,}453 on Pet (0.03--0.09\% of the model).
-    \item[LoRA] Freeze the backbone and insert low-rank updates $\Delta W = BA$ into the attention projections. Rank $r=16$, $\alpha=32$, dropout 0.1; the head is also trained.
+    \item[Nearest-class-mean (NCM)] No optimisation. Compute one L2-normalised prototype per class from the frozen CLS features:
   \end{description}
 
-  \vspace{0.15cm}
+  \[
+    \mu_c = \frac{1}{|\mathcal{S}_c|}\sum_{i\in\mathcal{S}_c}
+    \frac{f_\theta(x_i)}{\lVert f_\theta(x_i)\rVert_2},
+    \qquad
+    \hat{y} = \arg\max_c \cos\!\big(f_\theta(x), \mu_c\big).
+  \]
+
+  \vspace{-0.15cm}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
-      \begin{block}{LoRA target modules}
+      \begin{block}{NCM in the few-label regime}
         \footnotesize
-        ViT (Hugging Face): \texttt{q\_proj}, \texttt{v\_proj} \\
-        DINOv3 (\texttt{timm}): \texttt{attn.qkv}, \texttt{attn.proj}
+        One prototype per class is estimated from just 10 (Flowers102) or $\sim$99 (Pet) labelled images; no optimiser, no epochs, no checkpoint selection.
       \end{block}
     \end{column}
     \begin{column}{0.48\textwidth}
-      \begin{block}{Why low rank?}
+      \begin{block}{Cost of NCM}
         \footnotesize
-        The adaptation is expected to be low-dimensional: LoRA trains 0.7--1.1M parameters (0.7--1.1\%) while leaving the pretrained representation almost untouched.
+        Zero trainable parameters and a single feature-extraction pass: 6--25\,s and 0.62--0.70\,GB at evaluation time.
       \end{block}
     \end{column}
   \end{columns}
 
   \vspace{0.1cm}
   \footnotesize
-  All methods use the same cross-entropy objective and the same data order; only the trainable parameter mask differs.
+  All methods use the same cross-entropy objective and the same data order; only the trainable parameter mask differs, and NCM trains nothing at all.
 \end{frame}
 
 % --------------------------------------------------------------------------- %
 % 9. Methods (2/2)
 % --------------------------------------------------------------------------- %
-\begin{frame}[t]{Adaptation Strategies (2/2): BitFit, NCM, and the Parameter Budget}
+\begin{frame}[t]{Adaptation Strategies (2/2): BitFit, LoRA, and the Parameter Budget}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
       \small
       \textbf{BitFit.} Freeze every weight matrix; train all bias terms in the backbone plus the full classification head. This updates 0.12--0.21\% of the model.
-      \vspace{0.2cm}
+      \vspace{0.15cm}
 
-      \textbf{Nearest-class-mean (NCM).} No optimisation. Compute one L2-normalised prototype per class from the frozen CLS features:
-      \[
-        \mu_c = \frac{1}{|\mathcal{S}_c|}\sum_{i\in\mathcal{S}_c}
-        \frac{f_\theta(x_i)}{\lVert f_\theta(x_i)\rVert_2},
-        \qquad
-        \hat{y} = \arg\max_c \cos\!\big(f_\theta(x), \mu_c\big).
-      \]
-      NCM trains zero parameters and needs one forward pass over the training set.
+      \textbf{LoRA.} Freeze the backbone and insert low-rank updates $\Delta W = BA$ into the attention projections. Rank $r=16$, $\alpha=32$, dropout 0.1; the head is also trained.
+      \vspace{0.15cm}
+
+      \begin{block}{LoRA target modules}
+        \footnotesize
+        ViT (Hugging Face): \texttt{q\_proj}, \texttt{v\_proj} \\
+        DINOv3 (\texttt{timm}): \texttt{attn.qkv}, \texttt{attn.proj}
+      \end{block}
+      \begin{block}{Why low rank?}
+        \footnotesize
+        The adaptation is expected to be low-dimensional: LoRA trains 0.7--1.1M parameters (0.7--1.1\%) while leaving the pretrained representation almost untouched.
+      \end{block}
     \end{column}
     \begin{column}{0.46\textwidth}
       \centering
@@ -362,7 +372,7 @@
     \begin{itemize}
       \item The four trained methods share the \emph{same} optimiser, learning rate, schedule, epochs, and batch size; only the trainable parameter set differs.
       \item NCM has no optimiser and no epochs: it is a single feature-extraction pass followed by prototype assignment.
-      \item The best checkpoint is selected on validation loss. Pet's full fine-tuning runs selected earlier checkpoints (epoch 7 for ViT, epoch 4 for DINOv3); the other trained runs selected epoch 9.
+      \item The best checkpoint is selected on validation loss.
     \end{itemize}
   \end{block}
 \end{frame}
@@ -613,7 +623,54 @@
 \end{frame}
 
 % --------------------------------------------------------------------------- %
-% 23. The End
+% 23. Test results (1/2): Flowers102
+% --------------------------------------------------------------------------- %
+\begin{frame}[t]{Test Results (1/2): Flowers102}
+  \centering
+  \includegraphics[width=0.94\linewidth,height=0.32\textheight,keepaspectratio]{test_strip_flowers102.png}
+
+  \vspace{0.2cm}
+  \renewcommand{\arraystretch}{1.3}
+  \setlength{\tabcolsep}{5pt}
+  \small
+  \begin{tabular}{lcccccc}
+    \toprule
+    Image & Ground truth & Full & LP & LoRA & BitFit & NCM \\
+    \midrule
+    (a) & sweet william & sweet william & \textcolor{red}{geranium} & \textcolor{red}{geranium} & \textcolor{red}{geranium} & sweet william \\
+    (b) & carnation & carnation & \textcolor{red}{californian poppy} & carnation & carnation & carnation \\
+    (c) & pelargonium & \textcolor{red}{wallflower} & \textcolor{red}{geranium} & \textcolor{red}{geranium} & \textcolor{red}{geranium} & \textcolor{red}{sweet william} \\
+    (d) & geranium & geranium & geranium & geranium & geranium & geranium \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+% --------------------------------------------------------------------------- %
+% 24. Test results (2/2): Oxford-IIIT Pet
+% --------------------------------------------------------------------------- %
+\begin{frame}[t]{Test Results (2/2): Oxford-IIIT Pet}
+  \centering
+  \includegraphics[width=0.94\linewidth,height=0.32\textheight,keepaspectratio]{test_strip_oxfordiiitpet.png}
+
+  \vspace{0.2cm}
+  \renewcommand{\arraystretch}{1.3}
+  \setlength{\tabcolsep}{8pt}
+  \small
+  \begin{tabular}{lccccc}
+    \toprule
+    Image & Full & LP & LoRA & BitFit & NCM \\
+    \midrule
+    (a) & beagle & great pyrenees & great pyrenees & great pyrenees & great pyrenees \\
+    (b) & shiba inu & shiba inu & shiba inu & shiba inu & shiba inu \\
+    (c) & beagle & beagle & beagle & beagle & beagle \\
+    (d) & bengal & egyptian mau & egyptian mau & bengal & egyptian mau \\
+    (e) & pomeranian & pomeranian & pomeranian & pomeranian & pomeranian \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+% --------------------------------------------------------------------------- %
+% 25. The End
 % --------------------------------------------------------------------------- %
 \begin{frame}[plain]
   \centering
